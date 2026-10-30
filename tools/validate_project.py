@@ -301,8 +301,14 @@ if os.path.isfile(wrapper_jar):
 check(os.path.isfile(os.path.join(ROOT, "gradle", "wrapper", "gradle-wrapper.properties")),
       "gradle-wrapper.properties missing")
 for f in ("settings.gradle.kts", "build.gradle.kts", "gradle.properties", "app/build.gradle.kts",
-          "app/proguard-rules.pro"):
+          "app/proguard-rules.pro", "gradlew", "gradlew.bat"):
     check(os.path.isfile(os.path.join(ROOT, f)), f"missing {f}")
+gradlew = os.path.join(ROOT, "gradlew")
+if os.path.isfile(gradlew):
+    with open(gradlew, encoding="utf-8", errors="replace") as fh:
+        head = fh.read(64)
+    check(head.startswith("#!"), "gradlew must start with a shebang and be executable")
+    check(os.access(gradlew, os.X_OK), "gradlew must be executable")
 
 # ---------------------------------------------------------------- summary
 print(f"\n{'=' * 60}")
