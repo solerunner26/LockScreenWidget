@@ -112,9 +112,21 @@ jobs:
           exit $FAIL
 
       - name: Upload APK artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
           path: |
             app/build/outputs/apk/release/*.apk
             app/build/outputs/apk/release/**/*.apk
+
+      - name: Publish build log to branch for debugging (on failure)
+        if: failure()
+        run: |
+          mkdir -p ci-debug
+          cp /tmp/build.log ci-debug/build.log 2>/dev/null || echo "no build log available"
+          git config user.email "ci-debug@localhost"
+          git config user.name "ci-debug"
+          git add ci-debug/ 2>/dev/null
+          git commit -m "ci-debug: gradle build log from failed run" 2>/dev/null || echo "nothing to commit"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:arena/8ef1f1ea-lockscreenwidget 2>&1 | tail -2 || true
