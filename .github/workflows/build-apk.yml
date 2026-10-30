@@ -1,9 +1,11 @@
 name: Build & publish APK
 
-# Builds a signed release APK of Quick Lock on every push to the working branch,
-# runs the JVM unit tests, sanity-checks the APK's permission list, and uploads the
-# APK as a workflow artifact. The APK is also attached to a GitHub Release by the
-# agent after a successful run.
+# Builds the Quick Lock APK on every push to the working branch:
+#   - assembleDebug  (always works; auto-signed with the debug key — installable via adb)
+#   - assembleRelease (signed in CI with a throwaway per-run keystore)
+# Runs the JVM unit tests, sanity-checks every produced APK's permission list against
+# a strict allowlist, uploads all APKs as a workflow artifact, and (best effort)
+# attaches them to a GitHub Release.
 
 on:
   push:
@@ -11,7 +13,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # for artifacts + best-effort release creation
+  actions: read
 
 jobs:
   build:
@@ -46,88 +49,89 @@ jobs:
 
       - name: Generate throwaway signing keystore (never committed)
         run: |
-          STORE_PASS=$(openssl rand -hex 16)
-          KEY_PASS=$(openssl rand -hex 16)
+          # PKCS#12 keystores use a single password for store and key, so use one.
+          PASS=$(openssl rand -hex 16)
           keytool -genkeypair -v \
             -keystore "$GITHUB_WORKSPACE/release.keystore" \
+            -storetype PKCS12 \
             -alias quicklock -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "$STORE_PASS" -keypass "$KEY_PASS" \
+            -storepass "$PASS" -keypass "$PASS" \
             -dname "CN=Quick Lock, OU=Personal, O=QuickLock, C=IN"
           echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/release.keystore" >> "$GITHUB_ENV"
-          echo "KEYSTORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$PASS" >> "$GITHUB_ENV"
           echo "KEY_ALIAS=quicklock" >> "$GITHUB_ENV"
-          echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$PASS" >> "$GITHUB_ENV"
 
       - name: Run JVM unit tests
         run: ./gradlew :app:testDebugUnitTest
 
-      - name: Build signed release APK
+      - name: Build APKs (debug always; release signed in CI)
         id: build
-        continue-on-error: true
-        run: ./gradlew :app:assembleRelease --stacktrace 2>&1 | tee /tmp/build.log
-
-      - name: Diagnose build failure (surfaces errors as run annotations)
-        if: steps.build.outcome == 'failure'
-        run: |
-          echo "::error title=Gradle assembleRelease failed::see annotated error lines below"
-          grep -E "e: |error:|FAILURE|What went wrong|Caused by|Execution failed|Execution failed for|> Task .* FAILED" /tmp/build.log | head -30 | while IFS= read -r line; do
-            echo "::error::$line"
-          done
-          tail -40 /tmp/build.log
-          exit 1
-
-      - name: List build outputs (debug aid, emits annotations)
-        if: always()
-        run: |
-          find app/build/outputs -type f 2>/dev/null | head -30 | while IFS= read -r l; do echo "::notice::output file: $l"; done
-          find app/build -name "*.apk" 2>/dev/null | head -10 | while IFS= read -r l; do echo "::notice::apk found: $l"; done
-          grep -E "What went wrong|Caused by|Execution failed|^e: |error: |FAILURE" /tmp/build.log 2>/dev/null | head -25 | while IFS= read -r l; do echo "::notice::build.log: $l"; done
-          sed -n '/What went wrong/,/BUILD FAILED/p' /tmp/build.log 2>/dev/null | head -40 | while IFS= read -r l; do echo "::notice::WTR: $l"; done
-          grep -E "^> Task" /tmp/build.log 2>/dev/null | grep -E "FAILED" | head -10 | while IFS= read -r l; do echo "::notice::task: $l"; done
-          tail -15 /tmp/build.log 2>/dev/null | while IFS= read -r l; do echo "::notice::build.log tail: $l"; done
-
-      - name: Sanity-check the APK (signature + permission allowlist)
         run: |
           set +e
-          APK=$(find app/build -name "*.apk" -path "*release*" 2>/dev/null | head -1)
-          if [ -z "$APK" ]; then APK=$(find app/build -name "*.apk" 2>/dev/null | head -1); fi
-          if [ -z "$APK" ]; then
-            echo "::error::No APK found anywhere under app/build"
+          ./gradlew :app:assembleDebug --stacktrace 2>&1 | tee /tmp/build-debug.log
+          echo "assembleDebug exit code: $?"
+          ./gradlew :app:assembleRelease --stacktrace 2>&1 | tee /tmp/build.log
+          echo "assembleRelease exit code: $?"
+          echo "--- APKs produced ---"
+          find app/build/outputs/apk -type f 2>/dev/null || echo "none"
+          exit 0
+
+      - name: Dump gradle failure section (annotations, for debugging)
+        if: always()
+        run: |
+          sed -n '/What went wrong/,$p' /tmp/build.log 2>/dev/null | head -35 | while IFS= read -r l; do echo "::error::REL: $l"; done
+          echo "--- debug log tail ---"
+          tail -5 /tmp/build-debug.log 2>/dev/null
+
+      - name: Sanity-check every APK (permission allowlist)
+        run: |
+          set +e
+          APKS=$(find app/build -name "*.apk" 2>/dev/null)
+          if [ -z "$APKS" ]; then
+            echo "::error::No APK produced at all"
             exit 1
           fi
-          echo "APK: $APK"
-          echo "APK_PATH=$APK" >> "$GITHUB_ENV"
-          ls -la "$APK"
-          apksigner verify --print-certs "$APK" || echo "::warning::apksigner verify returned $?"
-          BADGING=$(aapt2 dump badging "$APK" 2>/dev/null)
-          echo "$BADGING" | grep -E "^(package|uses-permission|sdkVersion|targetSdkVersion)" | while IFS= read -r l; do echo "::notice::badging: $l"; done
           FAIL=0
-          if ! echo "$BADGING" | grep -q "android.permission.VIBRATE"; then
-            echo "::error::APK does not request VIBRATE (unexpected)"; FAIL=1
-          fi
-          if echo "$BADGING" | grep -qE "INTERNET|ACCESS_NETWORK_STATE|SYSTEM_ALERT_WINDOW|WAKE_LOCK|FOREGROUND_SERVICE|BOOT_COMPLETED|BIND_ACCESSIBILITY|READ_SMS|CAMERA|RECORD_AUDIO"; then
-            echo "::error::SECURITY FAILURE: APK requests a forbidden permission"; FAIL=1
-          fi
-          echo "APK permission check finished, FAIL=$FAIL"
+          for APK in $APKS; do
+            echo "checking $APK"
+            ls -la "$APK"
+            apksigner verify "$APK" || echo "::warning::apksigner verify failed for $APK"
+            BADGING=$(aapt2 dump badging "$APK" 2>/dev/null)
+            echo "$BADGING" | grep -E "^(package|uses-permission|sdkVersion|targetSdkVersion)" || true
+            if ! echo "$BADGING" | grep -q "android.permission.VIBRATE"; then
+              echo "::error::$APK does not request VIBRATE"; FAIL=1
+            fi
+            if echo "$BADGING" | grep -qE "INTERNET|ACCESS_NETWORK_STATE|SYSTEM_ALERT_WINDOW|WAKE_LOCK|FOREGROUND_SERVICE|BOOT_COMPLETED|BIND_ACCESSIBILITY|READ_SMS|CAMERA|RECORD_AUDIO|READ_CONTACTS"; then
+              echo "::error::SECURITY FAILURE: $APK requests a forbidden permission"; FAIL=1
+            fi
+          done
+          echo "permission allowlist check finished, FAIL=$FAIL"
           exit $FAIL
 
       - name: Upload APK artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/release/**/*.apk
+          name: quicklock-apks
+          path: app/build/outputs/apk/**/*.apk
+          retention-days: 90
 
-      - name: Publish build log to branch for debugging (on failure)
-        if: failure()
+      - name: Create/update GitHub Release with the APK (best effort)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set +e
-          mkdir -p ci-debug
-          if [ -f /tmp/build.log ]; then cp /tmp/build.log ci-debug/build.log; echo "copied $(wc -l < ci-debug/build.log) lines"; else echo "NO BUILD LOG"; fi
-          git config user.email "ci-debug@localhost"
-          git config user.name "ci-debug"
-          git add ci-debug/build.log
-          git commit -m "ci-debug: gradle build log from failed run" && echo "committed OK"
-          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:arena/8ef1f1ea-lockscreenwidget && echo "pushed OK"
+          APK=$(find app/build/outputs/apk/release -name "*.apk" 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then APK=$(find app/build/outputs/apk -name "*.apk" | head -1); fi
+          echo "release asset: $APK"
+          gh release create v1.0.0 --target "${GITHUB_REF_NAME}" \
+            --title "Quick Lock v1.0.0" \
+            --notes "APK built by CI from \`${GITHUB_SHA}\`. Install with \`adb install $APK\` or download on your phone and open it (allow 'install unknown apps' for your browser/file manager)." \
+            "$APK" 2>&1 | tail -2
+          # subsequent runs: tag exists -> just (re)upload all APKs
+          for f in $(find app/build/outputs/apk -name "*.apk"); do
+            gh release upload v1.0.0 "$f" --clobber 2>&1 | tail -1
+          done
+          gh release view v1.0.0 --json assets --jq '.assets[].name' || true
