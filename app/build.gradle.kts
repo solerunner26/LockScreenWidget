@@ -39,7 +39,11 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            isShrinkResources = true
+            // Resource shrinking DISABLED on purpose: AGP's shrinker can drop
+            // resources that are only referenced from manifest meta-data (e.g. the
+            // device-admin policies XML), which breaks device-admin activation.
+            // The app is tiny, so shrinking buys nothing.
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
