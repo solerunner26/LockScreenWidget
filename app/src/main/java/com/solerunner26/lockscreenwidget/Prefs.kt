@@ -22,6 +22,10 @@ class Prefs private constructor(private val sp: SharedPreferences) {
         const val BG_TRANSPARENT = 1
         const val BG_SOLID = 2
 
+        const val THEME_SYSTEM = 0
+        const val THEME_LIGHT = 1
+        const val THEME_DARK = 2
+
         @JvmStatic
         fun get(context: Context): Prefs =
             Prefs(context.getSharedPreferences(FILE, Context.MODE_PRIVATE))
@@ -40,12 +44,21 @@ class Prefs private constructor(private val sp: SharedPreferences) {
         set(value) = sp.edit().putInt("icon_color", value).apply()
 
     var backgroundStyle: Int
-        get() = sp.getInt("background_style", BG_TRANSLUCENT)
+        get() = sp.getInt("background_style", BG_TRANSPARENT)
         set(value) = sp.edit().putInt("background_style", value).apply()
+
+    /** When false (default) the widget is fully invisible: no icon, no background. */
+    var showIcon: Boolean
+        get() = sp.getBoolean("show_icon", false)
+        set(value) = sp.edit().putBoolean("show_icon", value).apply()
 
     var showLabel: Boolean
         get() = sp.getBoolean("show_label", false)
         set(value) = sp.edit().putBoolean("show_label", value).apply()
+
+    var themeMode: Int
+        get() = sp.getInt("theme_mode", THEME_SYSTEM)
+        set(value) = sp.edit().putInt("theme_mode", value).apply()
 
     var haptics: Boolean
         get() = sp.getBoolean("haptics", true)

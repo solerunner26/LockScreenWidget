@@ -95,25 +95,38 @@ class LockWidgetProvider : AppWidgetProvider() {
         val armed = prefs.gestureMode == Prefs.MODE_DOUBLE_TAP &&
             TapGestureLogic.isDoubleTap(prefs.lastTapAt, now, prefs.tapWindowMs)
 
-        views.setImageViewResource(R.id.widget_icon, R.drawable.ic_lock_widget)
-        views.setInt(R.id.widget_icon, "setColorFilter", if (armed) ARMED_TINT else prefs.iconColor)
+        if (prefs.showIcon) {
+            // Visible mode: lock icon (+ optional label) with a configurable background.
+            views.setViewVisibility(R.id.widget_icon, View.VISIBLE)
+            views.setImageViewResource(R.id.widget_icon, R.drawable.ic_lock_widget)
+            views.setInt(R.id.widget_icon, "setColorFilter", if (armed) ARMED_TINT else prefs.iconColor)
 
-        val background = when (prefs.backgroundStyle) {
-            Prefs.BG_TRANSPARENT -> R.drawable.widget_bg_transparent
-            Prefs.BG_SOLID -> R.drawable.widget_bg_solid
-            else -> if (armed) R.drawable.widget_bg_armed else R.drawable.widget_bg_translucent
-        }
-        views.setInt(R.id.widget_root, "setBackgroundResource", background)
+            val background = when (prefs.backgroundStyle) {
+                Prefs.BG_TRANSPARENT -> R.drawable.widget_bg_transparent
+                Prefs.BG_SOLID -> R.drawable.widget_bg_solid
+                else -> if (armed) R.drawable.widget_bg_armed else R.drawable.widget_bg_translucent
+            }
+            views.setInt(R.id.widget_root, "setBackgroundResource", background)
 
-        if (prefs.showLabel) {
-            views.setViewVisibility(R.id.widget_label, View.VISIBLE)
-            views.setTextViewText(
-                R.id.widget_label,
-                context.getString(if (armed) R.string.widget_label_again else R.string.widget_label)
-            )
-            views.setTextColor(R.id.widget_label, if (armed) ARMED_TINT else prefs.iconColor)
+            if (prefs.showLabel) {
+                views.setViewVisibility(R.id.widget_label, View.VISIBLE)
+                views.setTextViewText(
+                    R.id.widget_label,
+                    context.getString(if (armed) R.string.widget_label_again else R.string.widget_label)
+                )
+                views.setTextColor(R.id.widget_label, if (armed) ARMED_TINT else prefs.iconColor)
+            } else {
+                views.setViewVisibility(R.id.widget_label, View.GONE)
+            }
         } else {
+            // Default: fully invisible lock zone — no icon, no label, no background.
+            // Only a brief subtle flash after the first tap of a double tap ("armed").
+            views.setViewVisibility(R.id.widget_icon, View.GONE)
             views.setViewVisibility(R.id.widget_label, View.GONE)
+            views.setInt(
+                R.id.widget_root, "setBackgroundResource",
+                if (armed) R.drawable.widget_bg_armed else R.drawable.widget_bg_transparent
+            )
         }
 
         manager.updateAppWidget(appWidgetId, views)
@@ -148,6 +161,6 @@ class LockWidgetProvider : AppWidgetProvider() {
 
         private const val REQUEST_TAP = 1001
         private const val SYSTEM_UID = 1000
-        private val ARMED_TINT = 0xFF1A73E8.toInt() // accent blue for the "tap again" state
+        private val ARMED_TINT = 0xFF6D4AC8.toInt() // violet flash for the "tap again" state
     }
 }

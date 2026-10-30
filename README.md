@@ -19,17 +19,18 @@ it does not rely on accessibility at all.
 
 ## Features
 
-- 🏠 **Home-screen widget lock zone** — add it once (or several times for multiple
-  zones), **drag it anywhere** and **resize it freely** (long-press → resize handles).
-  The whole area is the tap target.
+- 🏠 **Invisible home-screen lock zone** — add the widget anywhere and resize it
+  freely; by default it is **fully transparent with no icon** (the whole area is the
+  tap target). Optionally show a lock icon/label with color & background choices.
+  Add it multiple times for multiple zones.
 - 👆 **Double-tap to lock** (configurable: single tap, or 300/450/600 ms double-tap
-  speed). The widget briefly lights up after the first tap ("armed — tap again") so
-  you always know it's listening.
-- ⚡ **Quick Settings tile** — an optional "Lock screen" tile in the notification
-  shade.
-- 📌 **App shortcut** — long-press the app icon → "Lock screen".
-- 🎨 **Customizable look** — icon color (white/dark/blue), background
-  (translucent / invisible / solid), optional "Lock" label.
+  speed). In invisible mode the zone flashes very subtly after the first tap
+  ("armed — tap again").
+- ⚡ **Quick Settings tile** and 📌 **app-icon shortcut** as extra triggers.
+- 🎨 **Material 3 UI (Jetpack Compose)** — two-tone violet→magenta gradient theme,
+  **dark mode** (System / Light / Dark), uniform gradient buttons, your logo as the
+  app icon. All help text (How to use / Privacy & security / About) lives in the
+  **Help** menu (top-right "?").
 - 🔔 Short vibration + toast when the screen locks (can be disabled).
 - 🔒 **Private by design** — see [Security model](#security-model).
 - 🪶 **Zero battery impact** — see [Battery](#battery).
@@ -132,8 +133,11 @@ adb install app/build/outputs/apk/release/app-release.apk
 ## Setup & usage
 
 1. Open **Quick Lock** → tap **"Activate device admin"** → confirm the system dialog.
-   (This is a one-time, offline system prompt. Read the explanation — it grants
-   force-lock only.)
+   (One-time, offline prompt; it grants force-lock only. If the dialog does not
+   appear, use **"Open 'Device admin apps' in Settings"** and tap Quick Lock there.
+   On Android 17 beta with **Device Protection (Advanced Protection) ON**, sideloaded
+   apps may be blocked from admin activation — temporarily turn Device Protection off,
+   activate, then turn it back on. See Help → "How to use" in the app.)
 2. Long-press your home screen → **Widgets** → add **"Quick Lock"**.
 3. **Drag the widget anywhere** you want quick access and **resize it** to the
    area you want (the whole area becomes the lock zone). Add it multiple times for

@@ -12,6 +12,21 @@
     <string name="shortcut_lock_now">Lock screen</string>
 
     <string name="admin_explanation">Quick Lock uses device admin only to lock the screen (force-lock). It cannot read your screen or notifications, cannot access your data, cannot wipe the device, and has no internet permission. You can revoke it at any time in Android Settings.</string>
+    <string name="admin_receiver_description">Locks the screen on request (force-lock only). No screen reading, no data access, no wipe.</string>
+
+    <string name="help_title">Help</string>
+    <string name="btn_open_admin_settings">Open “Device admin apps” in Settings</string>
+    <string name="admin_component_missing">⚠ Device admin component not detected — please reinstall the app.</string>
+    <string name="hint_admin_fallback">If the activation dialog does not appear, use “Open Device admin apps in Settings” and tap Quick Lock there.</string>
+    <string name="troubleshoot_admin">Android 17 beta note: if Device Protection (Advanced Protection) is ON, apps installed outside the Play Store may be blocked from device-admin activation. Temporarily turn Device Protection off (Settings → Security &amp; privacy → Advanced Protection), activate Quick Lock, then turn it back on.</string>
+
+    <string name="section_theme">Appearance</string>
+    <string name="theme_mode_label">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="opt_show_icon">Show lock icon on widget</string>
+    <string name="widget_invisible_note">Widget is invisible by default — the whole area you placed on the home screen is the lock zone.</string>
 
     <string name="msg_screen_locked">Screen locked</string>
     <string name="msg_admin_needed">Device admin is not active yet — opening setup…</string>
@@ -38,7 +53,7 @@
     <string name="icon_color_label">Icon color</string>
     <string name="color_white">White</string>
     <string name="color_dark">Dark</string>
-    <string name="color_blue">Blue</string>
+    <string name="color_violet">Violet</string>
     <string name="bg_label">Background</string>
     <string name="bg_translucent">Translucent</string>
     <string name="bg_transparent">Invisible</string>

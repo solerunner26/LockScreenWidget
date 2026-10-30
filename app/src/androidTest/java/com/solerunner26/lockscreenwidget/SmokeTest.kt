@@ -25,6 +25,9 @@ class SmokeTest {
         assertEquals(Prefs.MODE_DOUBLE_TAP, prefs.gestureMode)
         assertEquals(450L, prefs.tapWindowMs)
         assertTrue(prefs.haptics)
+        assertFalse(prefs.showIcon) // widget is invisible by default
+        assertEquals(Prefs.BG_TRANSPARENT, prefs.backgroundStyle)
+        assertEquals(Prefs.THEME_SYSTEM, prefs.themeMode)
         assertEquals(TapGestureLogic.NO_TAP, prefs.lastTapAt)
     }
 

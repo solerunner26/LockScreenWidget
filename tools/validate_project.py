@@ -128,6 +128,29 @@ for path in kt_files:
                   f"{os.path.relpath(path, ROOT)}: R.{rtype}.{name} not defined in res/")
 print(f"  resource references checked against {len(resources)} defined resources, {len(ids)} ids")
 
+# launcher icon PNGs in all densities + in-app logo
+for d in ("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"):
+    check(os.path.isfile(os.path.join(RES, f"mipmap-{d}", "ic_launcher.png")),
+          f"missing mipmap-{d}/ic_launcher.png")
+    check(os.path.isfile(os.path.join(RES, f"mipmap-{d}", "ic_launcher_round.png")),
+          f"missing mipmap-{d}/ic_launcher_round.png")
+check(os.path.isfile(os.path.join(RES, "drawable-nodpi", "logo.png")), "missing drawable-nodpi/logo.png")
+
+# Compose / Material 3 wiring
+app_gradle = open(os.path.join(APP, "build.gradle.kts"), encoding="utf-8").read()
+check("material3" in app_gradle, "app module must depend on Compose Material3")
+check("compose = true" in app_gradle, "buildFeatures.compose must be enabled")
+root_gradle = open(os.path.join(ROOT, "build.gradle.kts"), encoding="utf-8").read()
+check("kotlin.plugin.compose" in root_gradle, "root build must declare the Kotlin compose plugin")
+
+# invisible-by-default widget (user requirement: no lock symbol on the home screen)
+prefs_src = open(os.path.join(KOTLIN_DIR, "com", "solerunner26", "lockscreenwidget", "Prefs.kt"),
+                 encoding="utf-8").read()
+check('"show_icon", false' in prefs_src, "widget icon must default to hidden (invisible lock zone)")
+prov_src = open(os.path.join(KOTLIN_DIR, "com", "solerunner26", "lockscreenwidget", "LockWidgetProvider.kt"),
+                encoding="utf-8").read()
+check("prefs.showIcon" in prov_src, "widget provider must honor the showIcon pref")
+
 # ---------------------------------------------------------------- 3. manifest <-> code
 section("3. Manifest components match Kotlin classes")
 manifest = parsed[MANIFEST].getroot()

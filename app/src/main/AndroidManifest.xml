@@ -91,10 +91,14 @@
         <!-- Device admin receiver. Requests ONLY the force-lock policy: the app can
              lock the screen and nothing else. It cannot read the screen, wipe data,
              change passwords, or see any user content. Bound with BIND_DEVICE_ADMIN
-             so only the system can bind it. Revocable by the user at any time. -->
+             so only the system can bind it. Revocable by the user at any time.
+             label/description make the app show up properly in the system
+             "Device admin apps" list. -->
         <receiver
             android:name=".LockDeviceAdminReceiver"
+            android:description="@string/admin_receiver_description"
             android:exported="true"
+            android:label="@string/app_name"
             android:permission="android.permission.BIND_DEVICE_ADMIN">
             <meta-data
                 android:name="android.app.admin.device_admin"

@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.QuickLock" parent="android:Theme.Material.Light.NoActionBar">
+    <!-- Window theme only; the real UI is Jetpack Compose Material 3 (ui/theme/Theme.kt).
+         The Compose layer decides light/dark. -->
+    <style name="Theme.QuickLock" parent="android:Theme.Material.NoActionBar">
         <item name="android:colorPrimary">@color/primary</item>
         <item name="android:colorPrimaryDark">@color/primary_dark</item>
-        <item name="android:colorAccent">@color/accent</item>
-        <item name="android:windowBackground">@color/bg_light</item>
+        <item name="android:colorAccent">@color/secondary</item>
+        <item name="android:windowBackground">@color/bg_dark</item>
         <item name="android:statusBarColor">@color/primary_dark</item>
-        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:navigationBarColor">@color/bg_dark</item>
     </style>
 
     <!-- Used by the invisible LockNowActivity: shows nothing, leaves no trace. -->
