@@ -76,21 +76,28 @@ jobs:
           tail -40 /tmp/build.log
           exit 1
 
+      - name: List build outputs (debug aid, emits annotations)
+        if: always()
+        run: |
+          find app/build/outputs -type f 2>/dev/null | head -30 | while IFS= read -r l; do echo "::notice::output file: $l"; done
+          find app/build -name "*.apk" 2>/dev/null | head -10 | while IFS= read -r l; do echo "::notice::apk found: $l"; done
+          tail -25 /tmp/build.log 2>/dev/null | while IFS= read -r l; do echo "::notice::build.log: $l"; done
+
       - name: Sanity-check the APK (signature + permission allowlist)
         run: |
           set +e
-          APK=$(find app/build/outputs -name "app-release*.apk" | head -1)
+          APK=$(find app/build -name "*.apk" -path "*release*" 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then APK=$(find app/build -name "*.apk" 2>/dev/null | head -1); fi
           if [ -z "$APK" ]; then
-            echo "::error::No release APK found under app/build/outputs"
-            find app/build/outputs -type f | head -20
+            echo "::error::No APK found anywhere under app/build"
             exit 1
           fi
           echo "APK: $APK"
+          echo "APK_PATH=$APK" >> "$GITHUB_ENV"
           ls -la "$APK"
-          echo "$APK" > /tmp/apk_path.txt
           apksigner verify --print-certs "$APK" || echo "::warning::apksigner verify returned $?"
           BADGING=$(aapt2 dump badging "$APK" 2>/dev/null)
-          echo "$BADGING" | grep -E "^(package|uses-permission|sdkVersion|targetSdkVersion)" || true
+          echo "$BADGING" | grep -E "^(package|uses-permission|sdkVersion|targetSdkVersion)" | while IFS= read -r l; do echo "::notice::badging: $l"; done
           FAIL=0
           if ! echo "$BADGING" | grep -q "android.permission.VIBRATE"; then
             echo "::error::APK does not request VIBRATE (unexpected)"; FAIL=1
@@ -105,5 +112,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: app/build/outputs/apk/release/*.apk
-          retention-days: 90
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/**/*.apk
