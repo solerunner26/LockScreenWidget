@@ -63,7 +63,15 @@ jobs:
           echo "KEY_PASSWORD=$PASS" >> "$GITHUB_ENV"
 
       - name: Run JVM unit tests
-        run: ./gradlew :app:testDebugUnitTest
+        id: test
+        continue-on-error: true
+        run: ./gradlew :app:testDebugUnitTest --stacktrace 2>&1 | tee /tmp/test.log
+
+      - name: Diagnose test failure (annotations)
+        if: steps.test.outcome == 'failure'
+        run: |
+          grep -E "^e: |error: |FAILURE|What went wrong|Caused by|Execution failed" /tmp/test.log 2>/dev/null | head -30 | while IFS= read -r l; do echo "::error::TEST: $l"; done
+          exit 1
 
       - name: Build APKs (debug always; release signed in CI)
         id: build
@@ -81,6 +89,7 @@ jobs:
         if: always()
         run: |
           sed -n '/What went wrong/,$p' /tmp/build.log 2>/dev/null | head -35 | while IFS= read -r l; do echo "::error::REL: $l"; done
+          grep -E "^e: |error: " /tmp/test.log 2>/dev/null | head -20 | while IFS= read -r l; do echo "::error::TESTLOG: $l"; done
           echo "--- debug log tail ---"
           tail -5 /tmp/build-debug.log 2>/dev/null
 
