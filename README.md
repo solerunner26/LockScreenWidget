@@ -85,7 +85,30 @@ widget event — `updatePeriodMillis="0"` means the system never wakes the app o
 timer. There are **no services running in the background, no alarms, no boot
 receivers, no wake locks**. Battery impact: **zero**.
 
-## Build
+## Download the ready-made APK (no build needed)
+
+CI builds a signed APK on every push to the working branch and publishes it as a
+GitHub Release:
+
+- **Release page:** https://github.com/solerunner26/LockScreenWidget/releases/tag/v1.0.0
+- **Direct link (signed release APK, ~42 KB):** https://github.com/solerunner26/LockScreenWidget/releases/download/v1.0.0/app-release.apk
+- Fallback debug APK: https://github.com/solerunner26/LockScreenWidget/releases/download/v1.0.0/app-debug.apk
+- Or from the Actions tab (latest run → artifact `quicklock-apks`): https://github.com/solerunner26/LockScreenWidget/actions
+
+Install on your Pixel 10 Pro:
+
+```bash
+# option A: from your computer
+adb install app-release.apk
+# option B: download the APK on the phone, open it with Files, allow
+#          "install unknown apps" for your browser/file manager, install
+```
+
+> Note: CI signs each build with a fresh throwaway key, so if you later install a
+> *newer* build over an older one, uninstall the old one first (Android signature
+> check). First install is always fine.
+
+## Build from source
 
 Requirements: JDK 17, Android SDK with platform **android-36** and build-tools
 (easiest: Android Studio Hedgehog+ → open this folder → it will fetch the SDK).
