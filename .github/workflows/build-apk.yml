@@ -81,7 +81,8 @@ jobs:
         run: |
           find app/build/outputs -type f 2>/dev/null | head -30 | while IFS= read -r l; do echo "::notice::output file: $l"; done
           find app/build -name "*.apk" 2>/dev/null | head -10 | while IFS= read -r l; do echo "::notice::apk found: $l"; done
-          tail -25 /tmp/build.log 2>/dev/null | while IFS= read -r l; do echo "::notice::build.log: $l"; done
+          grep -E "What went wrong|Caused by|Execution failed|^e: |error: |FAILURE" /tmp/build.log 2>/dev/null | head -25 | while IFS= read -r l; do echo "::notice::build.log: $l"; done
+          tail -15 /tmp/build.log 2>/dev/null | while IFS= read -r l; do echo "::notice::build.log tail: $l"; done
 
       - name: Sanity-check the APK (signature + permission allowlist)
         run: |
