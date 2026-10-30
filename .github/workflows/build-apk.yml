@@ -79,6 +79,7 @@ jobs:
           set +e
           ./gradlew :app:assembleDebug --stacktrace 2>&1 | tee /tmp/build-debug.log
           echo "assembleDebug exit code: $?"
+          ./gradlew --stop > /dev/null 2>&1   # fresh daemon for the heavier release compile
           ./gradlew :app:assembleRelease --stacktrace 2>&1 | tee /tmp/build.log
           echo "assembleRelease exit code: $?"
           echo "--- APKs produced ---"
@@ -88,7 +89,8 @@ jobs:
       - name: Dump gradle failure section (annotations, for debugging)
         if: always()
         run: |
-          sed -n '/What went wrong/,$p' /tmp/build.log 2>/dev/null | head -35 | while IFS= read -r l; do echo "::error::REL: $l"; done
+          grep -E "^e: |error: |OutOfMemory|Killed process" /tmp/build.log 2>/dev/null | head -25 | while IFS= read -r l; do echo "::error::E: $l"; done
+          sed -n '/What went wrong/,$p' /tmp/build.log 2>/dev/null | head -20 | while IFS= read -r l; do echo "::error::REL: $l"; done
           grep -E "^e: |error: " /tmp/test.log 2>/dev/null | head -20 | while IFS= read -r l; do echo "::error::TESTLOG: $l"; done
           echo "--- debug log tail ---"
           tail -5 /tmp/build-debug.log 2>/dev/null
