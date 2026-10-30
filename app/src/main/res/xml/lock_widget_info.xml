@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget metadata.
+   * updatePeriodMillis="0"  -> the system NEVER wakes the app on a timer: zero battery cost.
+   * resizeMode="horizontal|vertical" + min/max resize -> the user can stretch the lock
+     zone to any size and drop it anywhere on the home screen.
+   * targetCell* (API 31+) and minWidth/minHeight (dp, all versions) are both set so the
+     widget sizes correctly on old and new launchers.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
+    android:icon="@drawable/ic_lock_widget"
+    android:initialLayout="@layout/widget_lock"
+    android:minHeight="56dp"
+    android:minWidth="56dp"
+    android:minResizeHeight="40dp"
+    android:minResizeWidth="40dp"
+    android:maxResizeHeight="720dp"
+    android:maxResizeWidth="720dp"
+    android:previewLayout="@layout/widget_lock"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="1"
+    android:targetCellWidth="1"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

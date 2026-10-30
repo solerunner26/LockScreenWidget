@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Quick Lock — privacy-first double-tap screen-lock widget.
+
+  SECURITY NOTES (auditable):
+   * The ONLY permission requested is VIBRATE (normal/install-time, used for the
+     lock confirmation buzz). There is deliberately NO:
+       - INTERNET / ACCESS_NETWORK_STATE  -> the app physically cannot send data anywhere
+       - accessibility service             -> the app physically cannot read the screen,
+                                              OTPs, notifications or anything else
+       - SYSTEM_ALERT_WINDOW               -> no floating overlay over other apps
+       - WAKE_LOCK / FOREGROUND_SERVICE / RECEIVE_BOOT_COMPLETED -> zero battery cost
+   * allowBackup=false + full data-extraction excludes -> settings never leave the device
+   * Every component declares android:exported explicitly (required on API 31+).
+   * The widget receiver verifies the caller UID of its custom tap action, so no
+     other app can forge a "lock" broadcast.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Normal permission, granted at install time, never prompts the user.
+         Used only for a short vibration when the screen locks. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:name=".QuickLockApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:description="@string/app_description"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.QuickLock">
+
+        <!-- Launcher entry: settings & setup. FLAG_SECURE is set in code so the
+             app UI can never appear in screenshots or screen recordings. -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Static app shortcut: long-press the app icon -> "Lock screen". -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+
+        <!-- Translucent, no-UI activity used by the static shortcut. It only calls
+             lockNow(); it verifies the calling package before doing so, and it is
+             excluded from recents with noHistory so it leaves no trace. -->
+        <activity
+            android:name=".LockNowActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.QuickLock.Translucent">
+            <intent-filter>
+                <action android:name="com.solerunner26.lockscreenwidget.action.LOCK_NOW" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Home-screen widget. Exported is mandatory for app widgets; the custom
+             WIDGET_TAP / REFRESH actions are guarded by a caller-UID check in code. -->
+        <receiver
+            android:name=".LockWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.appwidget.action.APPWIDGET_DELETED" />
+                <action android:name="android.appwidget.action.APPWIDGET_ENABLED" />
+                <action android:name="android.appwidget.action.APPWIDGET_DISABLED" />
+                <action android:name="android.appwidget.action.APPWIDGET_OPTIONS_CHANGED" />
+                <action android:name="android.appwidget.action.APPWIDGET_RESTORED" />
+                <action android:name="com.solerunner26.lockscreenwidget.action.WIDGET_TAP" />
+                <action android:name="com.solerunner26.lockscreenwidget.action.REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/lock_widget_info" />
+        </receiver>
+
+        <!-- Device admin receiver. Requests ONLY the force-lock policy: the app can
+             lock the screen and nothing else. It cannot read the screen, wipe data,
+             change passwords, or see any user content. Bound with BIND_DEVICE_ADMIN
+             so only the system can bind it. Revocable by the user at any time. -->
+        <receiver
+            android:name=".LockDeviceAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.admin.device_admin"
+                android:resource="@xml/device_admin_policies" />
+        </receiver>
+
+        <!-- Optional Quick Settings tile ("Lock screen"). Bound with
+             BIND_QUICK_SETTINGS_TILE so only the system can bind it. The service is
+             started by the system only while the tile is being used — it never runs
+             in the background on its own. -->
+        <service
+            android:name=".LockTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_lock_widget"
+            android:label="@string/tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+    </application>
+
+</manifest>

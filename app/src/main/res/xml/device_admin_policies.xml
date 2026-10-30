@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The COMPLETE list of device-admin policies this app requests: force-lock only.
+  That is the minimum needed for DevicePolicyManager.lockNow(). No wipe-data,
+  no reset-password, no watch-login, no limit-password — an auditor can verify
+  this single file and know exactly what the app is allowed to do.
+-->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <force-lock />
+    </uses-policies>
+</device-admin>
