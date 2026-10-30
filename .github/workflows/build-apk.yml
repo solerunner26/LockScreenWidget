@@ -123,10 +123,11 @@ jobs:
       - name: Publish build log to branch for debugging (on failure)
         if: failure()
         run: |
+          set +e
           mkdir -p ci-debug
-          cp /tmp/build.log ci-debug/build.log 2>/dev/null || echo "no build log available"
+          if [ -f /tmp/build.log ]; then cp /tmp/build.log ci-debug/build.log; echo "copied $(wc -l < ci-debug/build.log) lines"; else echo "NO BUILD LOG"; fi
           git config user.email "ci-debug@localhost"
           git config user.name "ci-debug"
-          git add ci-debug/ 2>/dev/null
-          git commit -m "ci-debug: gradle build log from failed run" 2>/dev/null || echo "nothing to commit"
-          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:arena/8ef1f1ea-lockscreenwidget 2>&1 | tail -2 || true
+          git add ci-debug/build.log
+          git commit -m "ci-debug: gradle build log from failed run" && echo "committed OK"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:arena/8ef1f1ea-lockscreenwidget && echo "pushed OK"
