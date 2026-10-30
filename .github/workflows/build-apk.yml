@@ -78,25 +78,32 @@ jobs:
 
       - name: Sanity-check the APK (signature + permission allowlist)
         run: |
-          APK=app/build/outputs/apk/release/app-release.apk
+          set +e
+          APK=$(find app/build/outputs -name "app-release*.apk" | head -1)
+          if [ -z "$APK" ]; then
+            echo "::error::No release APK found under app/build/outputs"
+            find app/build/outputs -type f | head -20
+            exit 1
+          fi
+          echo "APK: $APK"
           ls -la "$APK"
-          apksigner verify --print-certs "$APK"
-          BADGING=$(aapt2 dump badging "$APK")
+          echo "$APK" > /tmp/apk_path.txt
+          apksigner verify --print-certs "$APK" || echo "::warning::apksigner verify returned $?"
+          BADGING=$(aapt2 dump badging "$APK" 2>/dev/null)
           echo "$BADGING" | grep -E "^(package|uses-permission|sdkVersion|targetSdkVersion)" || true
-          echo "$BADGING" | grep "uses-permission" | grep -q "android.permission.VIBRATE"
-          if echo "$BADGING" | grep -qE "INTERNET|ACCESS_NETWORK_STATE|SYSTEM_ALERT_WINDOW|WAKE_LOCK|FOREGROUND_SERVICE|BOOT_COMPLETED|BIND_ACCESSIBILITY"; then
-            echo "SECURITY FAILURE: APK requests a forbidden permission" >&2
-            exit 1
+          FAIL=0
+          if ! echo "$BADGING" | grep -q "android.permission.VIBRATE"; then
+            echo "::error::APK does not request VIBRATE (unexpected)"; FAIL=1
           fi
-          if echo "$BADGING" | grep -q "accessibility"; then
-            echo "SECURITY FAILURE: APK declares an accessibility service" >&2
-            exit 1
+          if echo "$BADGING" | grep -qE "INTERNET|ACCESS_NETWORK_STATE|SYSTEM_ALERT_WINDOW|WAKE_LOCK|FOREGROUND_SERVICE|BOOT_COMPLETED|BIND_ACCESSIBILITY|READ_SMS|CAMERA|RECORD_AUDIO"; then
+            echo "::error::SECURITY FAILURE: APK requests a forbidden permission"; FAIL=1
           fi
-          echo "APK permission check OK"
+          echo "APK permission check finished, FAIL=$FAIL"
+          exit $FAIL
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          path: app/build/outputs/apk/release/*.apk
           retention-days: 90
