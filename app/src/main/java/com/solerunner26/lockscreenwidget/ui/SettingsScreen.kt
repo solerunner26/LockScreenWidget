@@ -39,11 +39,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
@@ -464,15 +462,16 @@ private fun SwitchRow(text: String, checked: Boolean, onChecked: (Boolean) -> Un
 
 @Composable
 private fun <T> SegmentedRow(options: List<Pair<T, String>>, selected: T, onSelected: (T) -> Unit) {
-    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-        options.forEachIndexed { index, (value, label) ->
-            SegmentedButton(
-                shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                checked = value == selected,
-                onClick = { onSelected(value) }
-            ) {
-                Text(label, fontSize = 12.sp)
-            }
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        options.forEach { (value, label) ->
+            FilterChip(
+                selected = value == selected,
+                onClick = { onSelected(value) },
+                label = { Text(label, fontSize = 12.sp) }
+            )
         }
     }
 }
