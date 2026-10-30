@@ -125,8 +125,10 @@ jobs:
             if ! echo "$MTREE" | grep -q "android.app.admin.device_admin"; then
               echo "::error::$APK: manifest is missing android.app.admin.device_admin meta-data"; FAIL=1
             fi
-            if ! unzip -l "$APK" | grep -q "device_admin_policies"; then
-              echo "::error::$APK: device_admin_policies.xml was stripped from resources"; FAIL=1
+            # (resource file paths are shortened in release APKs, so check the
+            # resource TABLE, not the zip entry names)
+            if ! aapt2 dump resources "$APK" 2>/dev/null | grep -q "device_admin_policies"; then
+              echo "::error::$APK: device_admin_policies resource missing from resources.arsc"; FAIL=1
             fi
           done
           echo "permission allowlist check finished, FAIL=$FAIL"
