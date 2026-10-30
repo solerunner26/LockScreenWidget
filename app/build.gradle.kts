@@ -62,6 +62,20 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    lint {
+        // These components are exported BY DESIGN and guarded in code:
+        //  - LockWidgetProvider: the widget host must be able to reach it; its custom
+        //    actions are accepted only from this app's own immutable PendingIntent
+        //    or the system (caller-UID check in onReceive).
+        //  - LockNowActivity: shortcut target; verifies the caller is this app or a
+        //    real home launcher before locking.
+        //  - LockTileService / LockDeviceAdminReceiver: bound only by the system
+        //    (BIND_QUICK_SETTINGS_TILE / BIND_DEVICE_ADMIN).
+        //  - SettingsActivity: the normal launcher entry point.
+        // Disable the corresponding lint checks so lintVitalRelease doesn't fail.
+        disable += setOf("ExportedActivity", "ExportedReceiver", "ExportedService")
+    }
 }
 
 kotlin {

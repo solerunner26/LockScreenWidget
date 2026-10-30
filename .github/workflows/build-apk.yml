@@ -62,7 +62,19 @@ jobs:
         run: ./gradlew :app:testDebugUnitTest
 
       - name: Build signed release APK
-        run: ./gradlew :app:assembleRelease
+        id: build
+        continue-on-error: true
+        run: ./gradlew :app:assembleRelease --stacktrace 2>&1 | tee /tmp/build.log
+
+      - name: Diagnose build failure (surfaces errors as run annotations)
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "::error title=Gradle assembleRelease failed::see annotated error lines below"
+          grep -E "e: |error:|FAILURE|What went wrong|Caused by|Execution failed|Execution failed for|> Task .* FAILED" /tmp/build.log | head -30 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
+          tail -40 /tmp/build.log
+          exit 1
 
       - name: Sanity-check the APK (signature + permission allowlist)
         run: |
