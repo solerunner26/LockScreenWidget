@@ -2,6 +2,8 @@ package com.solerunner26.lockscreenwidget.ui
 
 import android.app.admin.DevicePolicyManager
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -252,6 +254,15 @@ fun SettingsScreen(themeMode: Int, onThemeModeChange: (Int) -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp)
                     )
+                    TextButton(onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(
+                            ClipData.newPlainText("adb-dpm", context.getString(R.string.adb_command))
+                        )
+                        scope.launch { snackbar.showSnackbar(context.getString(R.string.adb_copied)) }
+                    }) {
+                        Text(stringResource(R.string.adb_copy_button))
+                    }
                 }
                 val ll = lastLockAt
                 Text(
@@ -499,6 +510,7 @@ private fun HelpDialog(onDismiss: () -> Unit) {
                     stringResource(R.string.section_how_to),
                     stringResource(R.string.how_to_text) + "\n\n" + stringResource(R.string.troubleshoot_admin)
                 )
+                HelpSection(stringResource(R.string.help_admin_title), stringResource(R.string.help_admin_body))
                 HelpSection(stringResource(R.string.section_privacy), stringResource(R.string.privacy_text))
                 HelpSection(stringResource(R.string.section_about), stringResource(R.string.about_text))
             }

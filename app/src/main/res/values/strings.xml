@@ -20,6 +20,12 @@
     <string name="hint_admin_fallback">If the activation dialog does not appear, use “Open Device admin apps in Settings” and tap Quick Lock there.</string>
     <string name="troubleshoot_admin">Android 17 beta note: if Device Protection (Advanced Protection) is ON, apps installed outside the Play Store may be blocked from device-admin activation. Temporarily turn Device Protection off (Settings → Security &amp; privacy → Advanced Protection), activate Quick Lock, then turn it back on.</string>
 
+    <string name="adb_copy_button">Copy ADB activate command</string>
+    <string name="adb_copied">Copied! Paste it in a terminal on your PC (phone connected via USB, USB debugging on).</string>
+    <string name="adb_command">adb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver</string>
+    <string name="help_admin_title">Device admin not listed / won’t activate?</string>
+    <string name="help_admin_body">1. Uninstall ANY old Quick Lock build first — adb uninstall com.solerunner26.lockscreenwidget — then install this APK fresh (updates across different builds fail on signature check: “App not installed”).\n2. Install via ADB for reliability: adb install app-release.apk\n3. If Device Protection (Advanced Protection) is ON on your Android 17 beta, it can block sideloaded apps: turn it off (Settings → Security &amp; privacy → Advanced Protection), install + activate, then re-enable it.\n4. Fastest method (bypasses the Settings list): with the phone connected to your PC and USB debugging enabled, run: adb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver — then the app’s status turns green immediately.\n5. Verify: adb shell dpm list-active-admins — you should see Quick Lock / LockDeviceAdminReceiver.\n6. If the app is installed but still not listed, reinstall it (step 1–2) — the receiver registration comes from the APK manifest.</string>
+
     <string name="section_theme">Appearance</string>
     <string name="theme_mode_label">Theme</string>
     <string name="theme_system">System</string>

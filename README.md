@@ -132,13 +132,20 @@ adb install app/build/outputs/apk/release/app-release.apk
 
 ## Setup & usage
 
-1. Open **Quick Lock** → tap **"Activate device admin"** → confirm the system dialog.
-   (One-time, offline prompt; it grants force-lock only. If the dialog does not
-   appear, use **"Open 'Device admin apps' in Settings"** and tap Quick Lock there.
-   On Android 17 beta with **Device Protection (Advanced Protection) ON**, sideloaded
-   apps may be blocked from admin activation — temporarily turn Device Protection off,
-   activate, then turn it back on. See Help → "How to use" in the app.)
-2. Long-press your home screen → **Widgets** → add **"Quick Lock"**.
+1. **Uninstall any old Quick Lock build first** — `adb uninstall com.solerunner26.lockscreenwidget` —
+   then install the new APK fresh (`adb install app-release.apk`). Updating across builds fails with
+   "App not installed" because each CI build is signed with a different key.
+2. Open **Quick Lock** → tap **"Activate device admin"** → confirm the system dialog.
+   If the dialog does not appear, or the app is not listed under
+   **Settings → Security & privacy → More security settings → Device admin apps**, use:
+   - the app's **"Open 'Device admin apps' in Settings"** button, or
+   - the reliable ADB bypass (phone connected to PC, USB debugging on):
+     `adb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver`
+     then verify with `adb shell dpm list-active-admins` (the app's status turns green).
+   - On Android 17 beta with **Device Protection (Advanced Protection) ON**, sideloaded apps can be
+     blocked: temporarily turn it off (Settings → Security & privacy → Advanced Protection),
+     install + activate, then re-enable it. Full steps also in the app: **Help → "Device admin not listed?"**.
+3. Long-press your home screen → **Widgets** → add **"Quick Lock"**.
 3. **Drag the widget anywhere** you want quick access and **resize it** to the
    area you want (the whole area becomes the lock zone). Add it multiple times for
    multiple zones.
