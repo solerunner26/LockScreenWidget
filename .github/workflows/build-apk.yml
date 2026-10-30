@@ -1,0 +1,79 @@
+name: Build & publish APK
+
+# Builds a signed release APK of Quick Lock on every push to the working branch,
+# runs the JVM unit tests, sanity-checks the APK's permission list, and uploads the
+# APK as a workflow artifact. The APK is also attached to a GitHub Release by the
+# agent after a successful run.
+
+on:
+  push:
+    branches: [arena/8ef1f1ea-lockscreenwidget]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK (platform 36 + build-tools)
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          echo "$ANDROID_HOME/build-tools/36.0.0" >> "$GITHUB_PATH"
+
+      - name: Generate throwaway signing keystore (never committed)
+        run: |
+          STORE_PASS=$(openssl rand -hex 16)
+          KEY_PASS=$(openssl rand -hex 16)
+          keytool -genkeypair -v \
+            -keystore "$GITHUB_WORKSPACE/release.keystore" \
+            -alias quicklock -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$STORE_PASS" -keypass "$KEY_PASS" \
+            -dname "CN=Quick Lock, OU=Personal, O=QuickLock, C=IN"
+          echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/release.keystore" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$STORE_PASS" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=quicklock" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$KEY_PASS" >> "$GITHUB_ENV"
+
+      - name: Run JVM unit tests
+        run: ./gradlew :app:testDebugUnitTest
+
+      - name: Build signed release APK
+        run: ./gradlew :app:assembleRelease
+
+      - name: Sanity-check the APK (signature + permission allowlist)
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          ls -la "$APK"
+          apksigner verify --print-certs "$APK"
+          BADGING=$(aapt2 dump badging "$APK")
+          echo "$BADGING" | grep -E "^(package|uses-permission|sdkVersion|targetSdkVersion)" || true
+          echo "$BADGING" | grep "uses-permission" | grep -q "android.permission.VIBRATE"
+          if echo "$BADGING" | grep -qE "INTERNET|ACCESS_NETWORK_STATE|SYSTEM_ALERT_WINDOW|WAKE_LOCK|FOREGROUND_SERVICE|BOOT_COMPLETED|BIND_ACCESSIBILITY"; then
+            echo "SECURITY FAILURE: APK requests a forbidden permission" >&2
+            exit 1
+          fi
+          if echo "$BADGING" | grep -q "accessibility"; then
+            echo "SECURITY FAILURE: APK declares an accessibility service" >&2
+            exit 1
+          fi
+          echo "APK permission check OK"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 90
