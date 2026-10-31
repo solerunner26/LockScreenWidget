@@ -4,6 +4,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Bump the major/minor here for big releases; CI appends the run number.
+val BASE_VERSION = "2.1"
+val VERSION_CODE_OFFSET = 100 // keeps CI codes above every earlier release (max 3)
+
 android {
     namespace = "com.solerunner26.lockscreenwidget"
     // compileSdk 36 (Android 16). The app is forward-compatible and runs unchanged
@@ -15,15 +19,20 @@ android {
         applicationId = "com.solerunner26.lockscreenwidget"
         minSdk = 26          // Android 8.0 — covers every modern Pixel
         targetSdk = 36
-        versionCode = 3
-        versionName = "2.0.1"
+        // Every CI run is a new, installable update: versionCode/versionName come
+        // from the GitHub Actions run number (e.g. run 26 -> 2.1.26 / code 126), and
+        // the release is tagged v<versionName> so Obtainium detects it.
+        // Local builds keep a low code and a "-local" suffix.
+        val ciRun = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+        versionCode = if (ciRun != null) VERSION_CODE_OFFSET + ciRun else 3
+        versionName = if (ciRun != null) "$BASE_VERSION.$ciRun" else "$BASE_VERSION.0-local"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // CI signing: when these env vars are present (GitHub Actions generates a
-    // throwaway keystore per run), the release APK is signed. Locally, without the
-    // env vars, the release build stays unsigned exactly as before. No keystore or
-    // password is ever committed to the repository.
+    // CI signing: when these env vars are present, the release APK is signed. CI
+    // restores the PERMANENT release key from repository secrets, so every build has
+    // the same signature and installs as an update. Locally, without the env vars,
+    // the release build stays unsigned. No keystore or password is ever committed.
     signingConfigs {
         create("ci") {
             val ksPath = System.getenv("KEYSTORE_PATH")

@@ -2,10 +2,11 @@ name: Build & publish APK
 
 # Builds the Quick Lock APK on every push to the working branch:
 #   - assembleDebug  (always works; auto-signed with the debug key — installable via adb)
-#   - assembleRelease (signed in CI with a throwaway per-run keystore)
+#   - assembleRelease (signed with the PERMANENT release key from repo secrets, so
+#     every build installs as an update over the previous one)
 # Runs the JVM unit tests, sanity-checks every produced APK's permission list against
-# a strict allowlist, uploads all APKs as a workflow artifact, and (best effort)
-# attaches them to a GitHub Release.
+# a strict allowlist, uploads all APKs as a workflow artifact, and publishes a new
+# versioned GitHub Release (v2.1.<run>) that Obtainium picks up as an update.
 
 on:
   push:
@@ -47,20 +48,33 @@ jobs:
           sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
           echo "$SDK_ROOT/build-tools/36.0.0" >> "$GITHUB_PATH"
 
-      - name: Generate throwaway signing keystore (never committed)
+      - name: Restore permanent release signing key
+        # The key lives only in repository secrets (RELEASE_KEYSTORE_B64 = base64 PKCS#12,
+        # RELEASE_KEYSTORE_PASSWORD, RELEASE_KEY_ALIAS). Same key every run -> updates
+        # install over the existing app. Without the secrets (e.g. a fork) the build
+        # falls back to a throwaway key and does NOT publish a release.
+        env:
+          KS_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         run: |
-          # PKCS#12 keystores use a single password for store and key, so use one.
-          PASS=$(openssl rand -hex 16)
-          keytool -genkeypair -v \
-            -keystore "$GITHUB_WORKSPACE/release.keystore" \
-            -storetype PKCS12 \
-            -alias quicklock -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "$PASS" -keypass "$PASS" \
-            -dname "CN=Quick Lock, OU=Personal, O=QuickLock, C=IN"
-          echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/release.keystore" >> "$GITHUB_ENV"
-          echo "KEYSTORE_PASSWORD=$PASS" >> "$GITHUB_ENV"
-          echo "KEY_ALIAS=quicklock" >> "$GITHUB_ENV"
-          echo "KEY_PASSWORD=$PASS" >> "$GITHUB_ENV"
+          KS="$RUNNER_TEMP/release.keystore"
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ] && [ -n "$KS_ALIAS" ]; then
+            echo "$KS_B64" | base64 -d > "$KS"
+            echo "PERMANENT_KEY=true" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Release signing secrets missing - using a throwaway key; no release will be published"
+            KS_PASS=$(openssl rand -hex 16); KS_ALIAS=quicklock
+            keytool -genkeypair -keystore "$KS" -storetype PKCS12 -alias "$KS_ALIAS" \
+              -keyalg RSA -keysize 2048 -validity 10000 -storepass "$KS_PASS" -keypass "$KS_PASS" \
+              -dname "CN=Quick Lock throwaway"
+            echo "PERMANENT_KEY=false" >> "$GITHUB_ENV"
+          fi
+          echo "::add-mask::$KS_PASS"
+          echo "KEYSTORE_PATH=$KS" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$KS_PASS" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$KS_ALIAS" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$KS_PASS" >> "$GITHUB_ENV"
 
       - name: Run JVM unit tests
         id: test
@@ -147,21 +161,25 @@ jobs:
           path: app/build/outputs/apk/**/*.apk
           retention-days: 90
 
-      - name: Create/update GitHub Release with the APK (best effort)
-        if: success()
+      - name: Publish versioned GitHub Release (Obtainium update feed)
+        if: success() && env.PERMANENT_KEY == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set +e
-          APK=$(find app/build/outputs/apk/release -name "*.apk" 2>/dev/null | head -1)
-          if [ -z "$APK" ]; then APK=$(find app/build/outputs/apk -name "*.apk" | head -1); fi
-          echo "release asset: $APK"
-          gh release create v1.0.0 --target "${GITHUB_REF_NAME}" \
-            --title "Quick Lock v1.0.0" \
-            --notes "APK built by CI from \`${GITHUB_SHA}\`. Install with \`adb install $APK\` or download on your phone and open it (allow 'install unknown apps' for your browser/file manager)." \
-            "$APK" 2>&1 | tail -2
-          # subsequent runs: tag exists -> just (re)upload all APKs
-          for f in $(find app/build/outputs/apk -name "*.apk"); do
-            gh release upload v1.0.0 "$f" --clobber 2>&1 | tail -1
-          done
-          gh release view v1.0.0 --json assets --jq '.assets[].name' || true
+          APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          [ -n "$APK" ] || { echo "::error::no release APK"; exit 1; }
+          VER=$(aapt2 dump badging "$APK" | sed -n "s/^package:.*versionName='\([^']*\)'.*/\1/p")
+          [ -n "$VER" ] || { echo "::error::could not read versionName"; exit 1; }
+          OUT="QuickLock-$VER.apk"
+          cp "$APK" "$OUT"
+          {
+            echo "## What's new"
+            git log -1 --pretty=%B | grep -v '^Co-Authored-By:'
+            echo
+            echo "Built from \`${GITHUB_SHA}\`. Installs as an update over any earlier 2.1.x build."
+            echo "Easiest: add github.com/${GITHUB_REPOSITORY} to Obtainium and tap Update."
+          } > notes.md
+          # Only the release APK is attached, so Obtainium never has to choose.
+          gh release create "v$VER" "$OUT" --target "$GITHUB_SHA" \
+            --title "Quick Lock $VER" --notes-file notes.md --latest
+          echo "published v$VER"

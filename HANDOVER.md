@@ -6,9 +6,9 @@ agent is in the last section.
 
 - **Repo:** https://github.com/solerunner26/LockScreenWidget
 - **Working branch:** `arena/8ef1f1ea-lockscreenwidget` (push only to this branch)
-- **Release:** https://github.com/solerunner26/LockScreenWidget/releases/tag/v1.0.0
-  - Direct APK: `https://github.com/solerunner26/LockScreenWidget/releases/download/v1.0.0/app-release.apk`
-  - Debug APK: `https://github.com/solerunner26/LockScreenWidget/releases/download/v1.0.0/app-debug.apk`
+- **Releases:** https://github.com/solerunner26/LockScreenWidget/releases/latest — one release per CI run,
+  tag `v2.1.<run>`, single asset `QuickLock-2.1.<run>.apk`. The user updates via Obtainium (in-app Help →
+  "Getting updates"). The old `v1.0.0` release (throwaway-key builds) is obsolete.
 - **Package:** `com.solerunner26.lockscreenwidget` · Admin receiver: `com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver`
 - **Stack (v2.0.0):** Kotlin 2.2.21, AGP 8.13.2, Gradle wrapper 8.13, compileSdk/targetSdk 36, minSdk 26, Jetpack Compose BOM 2026.06.01 (Material 3 1.4.0), activity-compose 1.13.0, lifecycle-runtime-compose 2.10.0. (BOM 2026.08+ needs compileSdk 37 + AGP 9.1 — a separate migration.)
 
@@ -57,7 +57,7 @@ Google Pixel 10 Pro on Android 17 beta):
 | `app/src/test/.../TapGestureLogicTest.kt`, `app/src/androidTest/.../SmokeTest.kt` | JVM unit tests + instrumented smoke test. |
 | `tools/validate_project.py` | 317 static checks enforcing the whole constraint list above. |
 | `tools/logic_spec_test.py` | Property test of the tap-gesture spec incl. 20k randomized sequences. |
-| `.github/workflows/build-apk.yml` | CI: JDK17 + SDK 36 → unit tests → `assembleDebug` + `assembleRelease` (release signed with a throwaway keystore generated in CI, never committed) → per-APK sanity checks (apksigner verify, `aapt2 dump permissions` allowlist = VIBRATE only, manifest xmltree contains receiver + admin meta-data, `aapt2 dump resources` contains `device_admin_policies`) → upload artifact `quicklock-apks` → best-effort `gh release create v1.0.0 --clobber` uploading both APKs. Compile/test failures are surfaced as `::error::` annotations. |
+| `.github/workflows/build-apk.yml` | CI: JDK17 + SDK 36 → unit tests → `assembleDebug` + `assembleRelease` (release signed with the PERMANENT key restored from secrets `RELEASE_KEYSTORE_B64` / `RELEASE_KEYSTORE_PASSWORD` / `RELEASE_KEY_ALIAS`; without them a throwaway key is used and no release is published) → per-APK sanity checks (apksigner verify, `aapt2 dump permissions` allowlist = VIBRATE only, manifest xmltree contains receiver + admin meta-data, `aapt2 dump resources` contains `device_admin_policies`) → upload artifact `quicklock-apks` → `gh release create v<versionName> --latest` with the release APK only. Compile/test failures are surfaced as `::error::` annotations. |
 
 ## 4. Build, test, release
 
@@ -78,13 +78,15 @@ CI (the only build path in some sandboxes; takes ~8–10 min):
 - Trigger: any `git push` to `arena/8ef1f1ea-lockscreenwidget`.
 - Watch: `gh run list -L 5`, `gh run view <id>`, annotations via
   `gh api repos/solerunner26/LockScreenWidget/check-runs/<jobId>/annotations`.
-- Result: green run ⇒ both APKs re-uploaded to release **v1.0.0** (same URLs as above).
-- **Every CI build uses a fresh signing key → on the phone always `adb uninstall com.solerunner26.lockscreenwidget` before installing a new APK**, otherwise "App not installed".
+- Result: green run ⇒ new release `v2.1.<run>` (versionCode `100 + run`, from `GITHUB_RUN_NUMBER` in
+  `app/build.gradle.kts`; local builds are `2.1.0-local`, code 3). Bump `BASE_VERSION` for big releases.
+- Signing key: permanent, stored only in repo secrets + the user's offline backup (outside the repo).
+  **Never rotate it** — a new key forces every user to uninstall. Updates install in place.
 
 ## 5. On-device testing & debugging cheat sheet (Pixel 10 Pro / Android 17 beta)
 
 ```bash
-# install / clean reinstall (signature changes between CI builds!)
+# install (updates install in place since 2.1 — same permanent key)
 adb uninstall com.solerunner26.lockscreenwidget
 adb install app-release.apk
 
@@ -109,6 +111,12 @@ Settings → Security & privacy → Advanced Protection. If ON, it can block sid
 admin activation: turn it OFF, install + activate, then turn it back ON. (Documented in-app under Help → "Device admin not listed?".)
 
 ## 6. Current state & open issues
+
+**v2.1 — updates without uninstalling.** The real reason every update needed an uninstall: CI generated
+a new throwaway signing key on every run. CI now signs with one permanent key (repo secrets), derives
+versionCode/versionName from the run number, and publishes a versioned `--latest` release per push. Update
+notifications + one-tap install come from Obtainium; the app stays offline (user chose this over an in-app
+updater that would need INTERNET + REQUEST_INSTALL_PACKAGES). In-app Help has a "Getting updates" topic.
 
 **RESOLVED (v2.0.1, verified on the API 37 emulator): double tap on the widget never locked.**
 Root cause: the v2.0.0 "disarm" redraw held the first tap's broadcast open with `goAsync()` for
@@ -189,9 +197,9 @@ HARD CONSTRAINTS (CI + tools/validate_project.py enforce these; never violate):
 
 BUILD/TEST: ./gradlew test; ./gradlew assembleDebug; python3 tools/validate_project.py
 (must print ALL CHECKS PASSED); python3 tools/logic_spec_test.py (ALL PASSED).
-CI: pushing to the branch builds both APKs and re-uploads them to release v1.0.0
-(direct: .../releases/download/v1.0.0/app-release.apk). Each CI build has a NEW signing
-key, so on a phone always: adb uninstall com.solerunner26.lockscreenwidget && adb install.
+CI: pushing to the branch publishes release v2.1.<run>, signed with the permanent key from
+repo secrets, so it installs as an update (the user gets it through Obtainium). Never change
+the signing key and never add INTERNET for an in-app updater (privacy guarantee).
 On-device admin activation fallback (Pixel/Android 17 beta):
 adb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver
 verify: adb shell dumpsys device_policy | grep -A2 "Enabled Device Admins"

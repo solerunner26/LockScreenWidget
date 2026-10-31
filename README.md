@@ -99,28 +99,33 @@ widget event — `updatePeriodMillis="0"` means the system never wakes the app o
 timer. There are **no services running in the background, no alarms, no boot
 receivers, no wake locks**. Battery impact: **zero**.
 
-## Download the ready-made APK (no build needed)
+## Download & automatic updates
 
-CI builds a signed APK on every push to the working branch and publishes it as a
-GitHub Release:
+Every push to the working branch builds a signed APK and publishes it as a new
+GitHub Release `v2.1.<run>` (always marked **Latest**). Every build is signed with
+the same permanent key, so a new build installs **over** the old one — no uninstall,
+settings and device admin are kept.
 
-- **Release page:** https://github.com/solerunner26/LockScreenWidget/releases/tag/v1.0.0
-- **Direct link (signed release APK, ~42 KB):** https://github.com/solerunner26/LockScreenWidget/releases/download/v1.0.0/app-release.apk
-- Fallback debug APK: https://github.com/solerunner26/LockScreenWidget/releases/download/v1.0.0/app-debug.apk
-- Or from the Actions tab (latest run → artifact `quicklock-apks`): https://github.com/solerunner26/LockScreenWidget/actions
+- **Latest release:** https://github.com/solerunner26/LockScreenWidget/releases/latest
 
-Install on your Pixel 10 Pro:
+### Get update notifications (recommended): Obtainium
 
-```bash
-# option A: from your computer
-adb install app-release.apk
-# option B: download the APK on the phone, open it with Files, allow
-#          "install unknown apps" for your browser/file manager, install
-```
+Quick Lock has no internet permission on purpose, so it cannot check for updates
+itself. [Obtainium](https://github.com/ImranR98/Obtainium) (free, open source)
+does it instead:
 
-> Note: CI signs each build with a fresh throwaway key, so if you later install a
-> *newer* build over an older one, uninstall the old one first (Android signature
-> check). First install is always fine.
+1. Install Obtainium on the phone.
+2. Obtainium → **Add app** → paste `https://github.com/solerunner26/LockScreenWidget` → **Add** → **Install**.
+3. Allow Obtainium to "install unknown apps" when asked.
+
+Obtainium then checks the repo in the background, notifies you when a new build is
+out, and **Update** downloads the ~2 MB APK and installs it in one tap. Installing
+through Obtainium also makes it the app's installer, so Android 12+ can apply later
+updates with fewer prompts. The in-app Help menu has the same steps ("Getting updates").
+
+> **One-time switch:** builds before 2.1 were signed with a throwaway key per CI run.
+> To move to the permanent key, deactivate device admin, uninstall the old Quick
+> Lock once, then install via Obtainium. After that, never again.
 
 ## Build from source
 

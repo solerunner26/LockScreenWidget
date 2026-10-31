@@ -126,6 +126,20 @@
     <string name="how_to_text">1. Activate device admin once (big button on the main screen).\n\n2. Tap “Add lock zone to home screen”, or long-press your home screen → Widgets → Quick Lock. Add it several times to create multiple lock zones.\n\n3. Drag it anywhere, then resize it freely (long-press the widget → drag the handles). By default it is completely invisible — the whole area is the tap target.\n\n4. Double-tap the area to lock the phone. After the first tap the zone flashes very subtly (“armed — tap again”).\n\n5. Extra triggers: the “Lock screen” Quick Settings tile, or long-press the app icon → “Lock screen”.</string>
     <string name="help_admin_title">Device admin troubleshooting</string>
     <string name="help_admin_body">Quick Lock not in “Device admin apps”, or Activate does nothing?\n\n1. Restricted settings (Android 13+, stricter on Android 15–17): apps installed from a browser or file manager are blocked from device admin until you allow it. Open App info (button on the setup card) → ⋮ menu (top-right) → “Allow restricted settings” → confirm with your fingerprint/PIN. Then tap Activate again.\n\n2. Advanced Protection (Settings → Security &amp; privacy → Advanced Protection): when ON it can block sideloaded apps from admin activation. Turn it off, activate Quick Lock, then turn it back on.\n\n3. Fresh install: different builds are signed with different keys. Uninstall the old Quick Lock first, then install the new APK — otherwise you get “App not installed”.\n\n4. Settings path on Pixel (Android 17): Settings → Security &amp; privacy → More security &amp; privacy → Device admin → Quick Lock.\n\n5. Guaranteed fallback via PC (USB debugging on):\nadb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver\nVerify with: adb shell dumpsys device_policy (look for “Enabled Device Admins”)</string>
+    <string name="help_updates_title">Getting updates</string>
+    <string name="help_updates_body">Installed version: %1$s
+
+Quick Lock has no internet permission, so it can never check for updates itself — that is what keeps it private. Updates come through Obtainium, a free open-source updater, instead.
+
+One-time setup:
+1. Install Obtainium (github.com/ImranR98/Obtainium, or F-Droid).
+2. In Obtainium tap Add app and paste:
+github.com/solerunner26/LockScreenWidget
+3. Tap Install. Allow Obtainium to install unknown apps when asked.
+
+From then on, every new build pushed to the repo shows up in Obtainium as an update (with a notification). Tap Update — it downloads the ~2 MB APK and installs it over this one. No uninstall, your settings and device admin stay as they are.
+
+If Android says the app conflicts with an existing package, the installed copy was signed with an older key: deactivate device admin, uninstall Quick Lock once, then install through Obtainium.</string>
     <string name="section_privacy">Privacy &amp; security</string>
     <string name="privacy_text">Why this app is safe:\n\n• It does NOT use the accessibility service — the permission that lets other apps read your screen, OTPs and notifications. Without it, this app physically cannot read anything on your screen.\n\n• It has NO internet permission — it cannot send any data anywhere, ever.\n\n• Device admin is granted with the “force lock” policy only: the app can lock the screen and do nothing else (no wipe, no password changes, no camera/mic). Revoke it anytime here or under Settings → Security → Device admin apps.\n\n• Zero battery impact: the widget reacts only to your taps (updatePeriodMillis = 0). No background services, no alarms, no boot receivers, no wake locks.\n\n• Every app screen is FLAG_SECURE — it cannot appear in screenshots or screen recordings.\n\n• It collects, stores and shares no data. Settings live only on this device (private storage, excluded from backup/transfer).\n\n• Widget taps carry a random per-install secret, so no other app can trigger a lock; all PendingIntents are immutable and every component is explicitly declared.</string>
     <string name="section_about">About</string>

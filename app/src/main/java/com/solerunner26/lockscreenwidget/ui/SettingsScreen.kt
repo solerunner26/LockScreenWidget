@@ -81,6 +81,7 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material.icons.outlined.Visibility
@@ -171,6 +172,7 @@ private val ICON_MAGENTA = 0xFFC94FA0.toInt()
 private enum class HelpTopic(@StringRes val title: Int, val icon: ImageVector) {
     HOW_TO(R.string.section_how_to, Icons.AutoMirrored.Outlined.MenuBook),
     ADMIN(R.string.help_admin_title, Icons.Outlined.Construction),
+    UPDATES(R.string.help_updates_title, Icons.Outlined.SystemUpdate),
     PRIVACY(R.string.section_privacy, Icons.Outlined.PrivacyTip),
     ABOUT(R.string.section_about, Icons.Outlined.Info)
 }
@@ -1236,6 +1238,7 @@ private fun HelpSheet(topic: HelpTopic, onDismiss: () -> Unit) {
     val body = when (topic) {
         HelpTopic.HOW_TO -> stringResource(R.string.how_to_text)
         HelpTopic.ADMIN -> stringResource(R.string.help_admin_body)
+        HelpTopic.UPDATES -> stringResource(R.string.help_updates_body, BuildConfig.VERSION_NAME)
         HelpTopic.PRIVACY -> stringResource(R.string.privacy_text)
         HelpTopic.ABOUT -> stringResource(R.string.about_text, BuildConfig.VERSION_NAME)
     }
