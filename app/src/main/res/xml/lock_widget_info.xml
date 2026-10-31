@@ -17,7 +17,7 @@
     android:minResizeWidth="40dp"
     android:maxResizeHeight="720dp"
     android:maxResizeWidth="720dp"
-    android:previewLayout="@layout/widget_lock"
+    android:previewLayout="@layout/widget_preview"
     android:resizeMode="horizontal|vertical"
     android:targetCellHeight="1"
     android:targetCellWidth="1"

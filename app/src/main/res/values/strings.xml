@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Quick Lock</string>
-    <string name="app_description">Double-tap lock widget. Private by design: no accessibility access, no internet, never reads your screen.</string>
+    <string name="app_description">Double-tap lock widget. Private by design: no internet, never reads your screen.</string>
 
     <string name="widget_name">Quick Lock</string>
-    <string name="widget_description">Resizable lock zone — double-tap it to lock your phone instantly. Place it anywhere and resize freely. No accessibility permission; it can never read your screen.</string>
+    <string name="widget_description">Invisible, resizable lock zone — double-tap it to lock your phone instantly. Place it anywhere and resize freely. It can never read your screen.</string>
     <string name="widget_label">Lock</string>
     <string name="widget_label_again">Again!</string>
+    <string name="widget_outline_hint">Lock\nzone</string>
 
     <string name="tile_label">Lock screen</string>
     <string name="tile_subtitle_ready">Tap to lock</string>
@@ -19,6 +20,7 @@
     <!-- Hero -->
     <string name="hero_title">Quick Lock</string>
     <string name="hero_subtitle">Private double-tap screen lock</string>
+    <string name="version_chip">v%1$s</string>
     <string name="status_active">Ready — double-tap your widget</string>
     <string name="status_inactive">Setup needed</string>
     <string name="btn_test_lock">Lock screen now</string>
@@ -37,6 +39,17 @@
     <string name="adb_command">adb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver</string>
     <string name="admin_component_missing">⚠ Device admin component not detected — please reinstall the app.</string>
     <string name="hint_admin_fallback">Scroll to “More security &amp; privacy” → “Device admin” → turn on Quick Lock.</string>
+
+    <!-- Lock method -->
+    <string name="section_method">Lock method</string>
+    <string name="method_power_title">Power-button lock</string>
+    <string name="method_power_on">On — locks like the power button, fingerprint works</string>
+    <string name="method_power_off">Off — device admin lock: Android then asks for your PIN and shows “locked by work policy”</string>
+    <string name="method_power_hint">Tap “Quick Lock power-button lock” → turn it on. Greyed out? App info → ⋮ → Allow restricted settings, then try again.</string>
+    <string name="btn_turn_on">Turn on</string>
+    <string name="btn_manage">Manage</string>
+    <string name="a11y_label">Quick Lock power-button lock</string>
+    <string name="a11y_description">Locks the screen like the power button, so fingerprint and face unlock keep working.\n\nThis service is configured so it CANNOT read your screen: it requests no window content and receives no accessibility events. Its only action is “lock screen”. Quick Lock has no internet permission.</string>
 
     <!-- Gesture -->
     <string name="section_gesture">Lock gesture</string>
@@ -71,6 +84,10 @@
     <string name="bg_transparent">None</string>
     <string name="bg_solid">Solid</string>
     <string name="opt_show_label">Show “Lock” label</string>
+    <string name="opt_show_outline">Show zone outline</string>
+    <string name="opt_show_outline_sub">Dashed frame to find, move and resize your zones. Turn off when done for a 100% transparent zone.</string>
+    <string name="opt_armed_flash">Tap-again flash</string>
+    <string name="opt_armed_flash_sub">Faint flash after the first tap. Off = the zone never shows anything.</string>
 
     <!-- Triggers -->
     <string name="section_triggers">Lock triggers</string>
@@ -80,6 +97,7 @@
     <string name="trigger_tile">Add Quick Settings tile</string>
     <string name="trigger_tile_sub">Lock from the notification shade</string>
     <string name="trigger_tile_manual">Swipe down twice → pencil (Edit) → drag “Lock screen” into your tiles</string>
+    <string name="trigger_widget_placed">Tap “Add to home screen”. Your zone appears with a dashed outline — long-press it, then drag the dots to resize. Turn off “Show zone outline” when done.</string>
     <string name="tile_added">Tile added to Quick Settings</string>
     <string name="tile_already">The tile is already in Quick Settings</string>
     <string name="trigger_shortcut">App-icon shortcut</string>
@@ -123,7 +141,7 @@
     <!-- Help -->
     <string name="help_title">Help</string>
     <string name="section_how_to">How to use</string>
-    <string name="how_to_text">1. Activate device admin once (big button on the main screen).\n\n2. Tap “Add lock zone to home screen”, or long-press your home screen → Widgets → Quick Lock. Add it several times to create multiple lock zones.\n\n3. Drag it anywhere, then resize it freely (long-press the widget → drag the handles). By default it is completely invisible — the whole area is the tap target.\n\n4. Double-tap the area to lock the phone. After the first tap the zone flashes very subtly (“armed — tap again”).\n\n5. Extra triggers: the “Lock screen” Quick Settings tile, or long-press the app icon → “Lock screen”.</string>
+    <string name="how_to_text">1. Activate device admin once (big button on the main screen).\n\n2. Tap “Add lock zone to home screen”, or long-press your home screen → Widgets → Quick Lock. Add it several times to create multiple lock zones.\n\n3. The new zone shows a dashed outline. Long-press it to move it, and drag the dots to resize it. When it is where you want it, turn off “Show zone outline” — the zone becomes 100% transparent and the whole area is the tap target.\n\n4. Double-tap the area to lock the phone. After the first tap the zone flashes very subtly (“armed — tap again”).\n\n5. Extra triggers: the “Lock screen” Quick Settings tile, or long-press the app icon → “Lock screen”.\n\n6. Want fingerprint unlock after locking? Turn on “Power-button lock” (Lock method). Device-admin locks always make Android ask for your PIN.</string>
     <string name="help_admin_title">Device admin troubleshooting</string>
     <string name="help_admin_body">Quick Lock not in “Device admin apps”, or Activate does nothing?\n\n1. Restricted settings (Android 13+, stricter on Android 15–17): apps installed from a browser or file manager are blocked from device admin until you allow it. Open App info (button on the setup card) → ⋮ menu (top-right) → “Allow restricted settings” → confirm with your fingerprint/PIN. Then tap Activate again.\n\n2. Advanced Protection (Settings → Security &amp; privacy → Advanced Protection): when ON it can block sideloaded apps from admin activation. Turn it off, activate Quick Lock, then turn it back on.\n\n3. Fresh install: different builds are signed with different keys. Uninstall the old Quick Lock first, then install the new APK — otherwise you get “App not installed”.\n\n4. Settings path on Pixel (Android 17): Settings → Security &amp; privacy → More security &amp; privacy → Device admin → Quick Lock.\n\n5. Guaranteed fallback via PC (USB debugging on):\nadb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver\nVerify with: adb shell dumpsys device_policy (look for “Enabled Device Admins”)</string>
     <string name="help_updates_title">Getting updates</string>
@@ -141,7 +159,7 @@ From then on, every new build pushed to the repo shows up in Obtainium as an upd
 
 If Android says the app conflicts with an existing package, the installed copy was signed with an older key: deactivate device admin, uninstall Quick Lock once, then install through Obtainium.</string>
     <string name="section_privacy">Privacy &amp; security</string>
-    <string name="privacy_text">Why this app is safe:\n\n• It does NOT use the accessibility service — the permission that lets other apps read your screen, OTPs and notifications. Without it, this app physically cannot read anything on your screen.\n\n• It has NO internet permission — it cannot send any data anywhere, ever.\n\n• Device admin is granted with the “force lock” policy only: the app can lock the screen and do nothing else (no wipe, no password changes, no camera/mic). Revoke it anytime here or under Settings → Security → Device admin apps.\n\n• Zero battery impact: the widget reacts only to your taps (updatePeriodMillis = 0). No background services, no alarms, no boot receivers, no wake locks.\n\n• Every app screen is FLAG_SECURE — it cannot appear in screenshots or screen recordings.\n\n• It collects, stores and shares no data. Settings live only on this device (private storage, excluded from backup/transfer).\n\n• Widget taps carry a random per-install secret, so no other app can trigger a lock; all PendingIntents are immutable and every component is explicitly declared.</string>
+    <string name="privacy_text">Why this app is safe:\n\n• It never reads your screen. The optional “power-button lock” uses Android’s accessibility system only for its “lock screen” action, and is configured so it CANNOT read the screen: no window content, no events. It stays off unless you turn it on.\n\n• It has NO internet permission — it cannot send any data anywhere, ever.\n\n• Device admin is granted with the “force lock” policy only: the app can lock the screen and do nothing else (no wipe, no password changes, no camera/mic). Revoke it anytime here or under Settings → Security → Device admin apps.\n\n• Zero battery impact: the widget reacts only to your taps (updatePeriodMillis = 0). No alarms, no boot receivers, no wake locks. The optional power-button lock is an idle service that receives no events, so it uses no CPU.\n\n• Every app screen is FLAG_SECURE — it cannot appear in screenshots or screen recordings.\n\n• It collects, stores and shares no data. Settings live only on this device (private storage, excluded from backup/transfer).\n\n• Widget taps carry a random per-install secret, so no other app can trigger a lock; all PendingIntents are immutable and every component is explicitly declared.</string>
     <string name="section_about">About</string>
-    <string name="about_text">Quick Lock %1$s — open source: github.com/solerunner26/LockScreenWidget\n\nPermissions used: VIBRATE only (lock-confirmation buzz).\nDevice admin: force-lock only.\nNo internet permission, no accessibility service, no analytics, no ads.\nWorks on Android 8.0+ including the latest Android beta releases.</string>
+    <string name="about_text">Quick Lock %1$s — open source: github.com/solerunner26/LockScreenWidget\n\nPermissions used: VIBRATE only (lock-confirmation buzz).\nDevice admin: force-lock only.\nOptional power-button lock: accessibility “lock screen” action only, cannot read the screen.\nNo internet permission, no analytics, no ads.\nWorks on Android 8.0+ including the latest Android beta releases.</string>
 </resources>

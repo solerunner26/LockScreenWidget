@@ -7,15 +7,19 @@ screen**: **double-tap it and the phone locks instantly**. Built for people who 
 worried about apps that ask for the **accessibility service** (the permission that
 lets an app *read everything on your screen* — OTPs, banking apps, messages).
 
-> **This app never uses accessibility.** It cannot read your screen, your
-> notifications, your OTPs or anything else. It has **no internet permission** and
-> physically cannot send data anywhere. It uses **device admin with the
-> "force-lock" policy only** — the single capability needed to lock the screen.
+> **This app never reads your screen.** It cannot see your notifications, your
+> OTPs or anything else, and it has **no internet permission**, so it physically
+> cannot send data anywhere. Two lock methods:
+> - **Device admin, "force-lock" policy only** (default). Android then always asks
+>   for your PIN on the next unlock ("locked by work policy", no fingerprint).
+> - **Optional power-button lock**: locks exactly like the power button, so
+>   fingerprint keeps working. It uses Android's accessibility system *only* for the
+>   "lock screen" action and is configured **blind**: no window content, no events,
+>   own package only (`capabilities=0` in `dumpsys accessibility`). Off by default.
 
 Works on Android 8.0+ (API 26+), including the latest Android beta releases
-(e.g. Android 17 beta on a Pixel 10 Pro). On newer Android versions where
-"Device Protection" blocks accessibility-based apps, this app keeps working because
-it does not rely on accessibility at all.
+(e.g. Android 17 beta on a Pixel 10 Pro). If Advanced Protection blocks the
+optional power-button lock, the device-admin lock keeps working.
 
 ---
 
@@ -46,9 +50,10 @@ it does not rely on accessibility at all.
 
 | Approach | Can the app read your screen / OTPs? | Used by this app? |
 |---|---|---|
-| Accessibility service (used by e.g. "Screen Off Widget" `com.jordigordillo.dtswidget`) | **Yes — full screen reading** | ❌ No |
+| Typical accessibility lock app (e.g. "Screen Off Widget" `com.jordigordillo.dtswidget`) | **Yes — full screen reading** | ❌ No |
 | Root / `goToSleep` | No, but requires root | ❌ No |
-| **Device admin → `DevicePolicyManager.lockNow()` (force-lock policy only)** | **No — device admin cannot read the screen** | ✅ **Yes** |
+| **Device admin → `DevicePolicyManager.lockNow()` (force-lock policy only)** | **No — device admin cannot read the screen** | ✅ **Yes (default)** |
+| **Blind accessibility service → `GLOBAL_ACTION_LOCK_SCREEN`** (no window content, no events) | **No — `canRetrieveWindowContent=false`, receives nothing** | ✅ **Optional** (keeps fingerprint) |
 
 The app requests device admin with **only** `<force-lock />`
 (`app/src/main/res/xml/device_admin_policies.xml`). That grants exactly one power:
@@ -56,12 +61,17 @@ locking the screen. No wipe, no password changes, no camera/mic, no screen readi
 You can revoke it at any time under **Settings → Security → Device admin apps**
 (or from the app's own settings screen) — one tap, no confirmation needed.
 
-After locking, your normal unlock works as usual (fingerprint/face/PIN on Pixel).
+**Device-admin locks always require the PIN** for the next unlock: Android marks
+every `lockNow()` as "locked by work policy" and disables fingerprint/face until the
+PIN is entered. That is platform behaviour, not a bug. Turn on the optional
+**power-button lock** (app → Lock method) to keep fingerprint unlock.
 
 ## Security model
 
-- **No accessibility service** — the app has no way to read the screen, OTPs or
-  notifications. There is no `AccessibilityService` anywhere in the codebase.
+- **Never reads the screen** — the only accessibility code is the optional, blind
+  `LockAccessibilityService` (no window content, no event types, own package only;
+  its code may only call `GLOBAL_ACTION_LOCK_SCREEN`). `tools/validate_project.py`
+  fails the build if any of that changes.
 - **No internet permission** — no network stack is even imported; the app cannot
   exfiltrate anything. Android enforces this in the kernel: a process without
   the INTERNET permission cannot even open a network socket, so even code an
@@ -217,9 +227,9 @@ tools/logic_spec_test.py                         gesture-logic property test (ru
 
 - Play Store app used as feature reference: "Screen Off Widget"
   (`com.jordigordillo.dtswidget`) — it locks via double-tap on an invisible resizable
-  widget plus a QS tile, but it requires the **accessibility service**. Quick Lock
-  offers the same UX with **device admin force-lock instead**, so it never gains
-  screen-reading ability. (The GitHub repo `alextnetto/res` was checked too — it is a
+  widget plus a QS tile, but it requires a full **accessibility service**. Quick Lock
+  offers the same UX with **device admin force-lock**, plus an optional *blind*
+  accessibility lock, so it never gains screen-reading ability. (The GitHub repo `alextnetto/res` was checked too — it is a
   web-SaaS reverse-engineering skill kit, unrelated to Android lock widgets.)
 
 ## License

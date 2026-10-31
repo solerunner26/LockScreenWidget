@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget-picker preview only: the real zone is fully transparent, so the picker
+     shows a dashed frame with a lock icon to make it recognisable. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_outline">
+
+    <ImageView
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_gravity="center"
+        android:contentDescription="@string/widget_name"
+        android:src="@drawable/ic_lock_widget" />
+</FrameLayout>

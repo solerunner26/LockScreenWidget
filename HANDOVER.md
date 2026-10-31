@@ -20,16 +20,20 @@ A privacy-first **double-tap screen-lock home-screen widget** for Android (built
 Google Pixel 10 Pro on Android 17 beta):
 
 - User adds a freely positionable/resizable home-screen widget; **double-tap inside it locks the phone instantly**.
-- Locking is done **only** via `DevicePolicyManager.lockNow()` with device-admin **force-lock** policy.
-- **No accessibility service, ever** (Android 17 strips it from non-accessibility apps anyway).
+- Locking: device-admin `DevicePolicyManager.lockNow()` (force-lock policy), or — optional, user-enabled —
+  the **blind** `LockAccessibilityService` (`GLOBAL_ACTION_LOCK_SCREEN`), which keeps fingerprint unlock.
+  `lockNow()` always forces the PIN (strongAuthRequired=0x2, "locked by work policy"); the a11y lock does not.
 - UI: Compose Material 3, violet→magenta gradient two-tone theme, dark mode (System/Light/Dark), uniform gradient buttons, **no help text on the main screen** (Help menu top-right: How to use / Device-admin troubleshooting / Privacy & security / About), user logo as app icon.
 - Widget is **invisible by default** (fully transparent; brief violet "armed" flash on first tap of a double-tap; optional icon/label in settings).
 
 ## 2. Non-negotiable constraints (do not break — enforced by CI + validator)
 
-1. **Permissions: only `android.permission.VIBRATE`.** No INTERNET, no accessibility, no SYSTEM_ALERT_WINDOW, no WAKE_LOCK / FOREGROUND_SERVICE / RECEIVE_BOOT_COMPLETED. CI hard-fails the build on any other permission (`aapt2 dump permissions` allowlist).
+1. **Permissions: only `android.permission.VIBRATE`.** No INTERNET, no SYSTEM_ALERT_WINDOW, no WAKE_LOCK / FOREGROUND_SERVICE / RECEIVE_BOOT_COMPLETED. CI hard-fails the build on any other permission (`aapt2 dump permissions` allowlist).
 2. **Device admin policies: only `<force-lock />`** in `res/xml/device_admin_policies.xml`.
-3. **Never read the screen**: no accessibility service, no content URIs of other apps, no notifications access.
+3. **Never read the screen**: the ONLY accessibility code is the optional blind `LockAccessibilityService`
+   (`canRetrieveWindowContent=false`, no `accessibilityEventTypes`, `packageNames` = own package, flagDefault,
+   no gesture/key/screenshot capabilities, code uses only `GLOBAL_ACTION_LOCK_SCREEN`; validator enforces all of
+   it). No content URIs of other apps, no notifications access.
 4. **Screen-recording/screenshot resistant**: all activities keep `FLAG_SECURE`.
 5. **Zero battery**: `updatePeriodMillis="0"`, no services, alarms, receivers that wake, no wake locks. Verify on device with `dumpsys power | grep -i wakelock` (should list none from our package).
 6. **Minimal attack surface**: every component has explicit `android:exported`; all PendingIntents are `FLAG_IMMUTABLE`; the widget's custom tap action carries a per-install secret token (`Prefs.tapToken`) that `LockWidgetProvider` verifies — note `Binder.getCallingUid()` inside `onReceive` always returns our own UID, so a UID check there protects nothing; `allowBackup=false` + full data-extraction excludes.
@@ -112,6 +116,18 @@ admin activation: turn it OFF, install + activate, then turn it back ON. (Docume
 
 ## 6. Current state & open issues
 
+**v2.2 (verified on the API 37 emulator with a PIN set):**
+- *"Locked by work policy" + no fingerprint*: platform behaviour of `lockNow()` (strongAuthRequired=0x2).
+  New optional blind `LockAccessibilityService` locks via `GLOBAL_ACTION_LOCK_SCREEN` → "Going to sleep due to
+  accessibility", strongAuthRequired=0x0, keyguard shown, `dumpsys accessibility` = capabilities=0, eventTypes=
+  (none). LockController prefers it when enabled, else device admin. UI: "Lock method" card.
+- *"Add lock zone" looked broken*: the pin dialog worked but the new zone was invisible. Now the button turns on
+  a dashed "Show zone outline" mode (with a snackbar on how to resize); turning it off = 100% transparent.
+  Picker preview uses `widget_preview.xml`.
+- *Transparency*: invisible mode removes the background entirely (resource 0); initial layout is transparent;
+  optional "Tap-again flash" toggle.
+- Version chip `v<versionName>` in the hero card.
+
 **v2.1 — updates without uninstalling.** The real reason every update needed an uninstall: CI generated
 a new throwaway signing key on every run. CI now signs with one permanent key (repo secrets), derives
 versionCode/versionName from the run number, and publishes a versioned `--latest` release per push. Update
@@ -180,9 +196,9 @@ READ FIRST: HANDOVER.md (in repo root) — it has the full architecture map, bui
 commands, CI behavior and an on-device ADB cheat sheet. Also read README.md.
 
 HARD CONSTRAINTS (CI + tools/validate_project.py enforce these; never violate):
-1. The ONLY permission is android.permission.VIBRATE. No INTERNET, no accessibility
-   service (never read the screen/OTPs/notifications), no SYSTEM_ALERT_WINDOW, no
-   WAKE_LOCK/FOREGROUND_SERVICE/RECEIVE_BOOT_COMPLETED.
+1. The ONLY permission is android.permission.VIBRATE. No INTERNET, no SYSTEM_ALERT_WINDOW,
+   no WAKE_LOCK/FOREGROUND_SERVICE/RECEIVE_BOOT_COMPLETED. Never read the screen: the only
+   accessibility code is the optional BLIND LockAccessibilityService (lock-screen action only).
 2. Device admin policies XML must contain ONLY <force-lock />; locking happens ONLY via
    DevicePolicyManager.lockNow() from LockController.
 3. All activities keep FLAG_SECURE (screenshot/screen-record resistant).

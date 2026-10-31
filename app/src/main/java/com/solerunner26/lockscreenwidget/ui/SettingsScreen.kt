@@ -71,6 +71,9 @@ import androidx.compose.material.icons.outlined.AppSettingsAlt
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.BrightnessAuto
 import androidx.compose.material.icons.outlined.Construction
+import androidx.compose.material.icons.outlined.CropFree
+import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.FlashOn
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Dashboard
@@ -111,6 +114,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -158,6 +162,7 @@ import com.solerunner26.lockscreenwidget.ui.theme.QuickLockTheme
 import com.solerunner26.lockscreenwidget.ui.theme.Violet
 import com.solerunner26.lockscreenwidget.ui.theme.availablePalettes
 import com.solerunner26.lockscreenwidget.ui.theme.paletteById
+import com.solerunner26.lockscreenwidget.LockAccessibilityService
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.CoroutineScope
@@ -194,6 +199,8 @@ fun SettingsScreen(
     val adbCommand = stringResource(R.string.adb_command)
 
     var adminActive by remember { mutableStateOf(LockController.isAdminActive(context)) }
+    var powerLock by remember { mutableStateOf(LockController.isPowerButtonLockOn()) }
+    val ready = adminActive || powerLock
     var receiverOk by remember { mutableStateOf(checkAdminReceiverRegistered(context)) }
     var helpMenuOpen by remember { mutableStateOf(false) }
     var helpTopic by remember { mutableStateOf<HelpTopic?>(null) }
@@ -204,11 +211,14 @@ fun SettingsScreen(
     var iconColor by remember { mutableIntStateOf(prefs.iconColor) }
     var bgStyle by remember { mutableIntStateOf(prefs.backgroundStyle) }
     var showLabel by remember { mutableStateOf(prefs.showLabel) }
+    var showOutline by remember { mutableStateOf(prefs.showOutline) }
+    var armedFlash by remember { mutableStateOf(prefs.armedFlash) }
     var haptics by remember { mutableStateOf(prefs.haptics) }
     var lastLockAt by remember { mutableLongStateOf(prefs.lastLockAt) }
 
     fun refreshAdmin() {
         adminActive = LockController.isAdminActive(context)
+        powerLock = LockController.isPowerButtonLockOn()
         receiverOk = checkAdminReceiverRegistered(context)
         lastLockAt = prefs.lastLockAt
         LockWidgetProvider.updateAll(context)
@@ -299,10 +309,10 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp)
         ) {
             HeroCard(
-                adminActive = adminActive,
+                ready = ready,
                 lastLockAt = lastLockAt,
                 onPrimary = {
-                    if (adminActive) {
+                    if (ready) {
                         LockController.lock(context)
                         lastLockAt = prefs.lastLockAt
                     } else {
@@ -311,9 +321,9 @@ fun SettingsScreen(
                 }
             )
 
-            // ---- One-time setup (only while device admin is missing) ----
+            // ---- One-time setup (only while no lock method is enabled) ----
             AnimatedVisibility(
-                visible = !adminActive,
+                visible = !ready,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
@@ -328,6 +338,22 @@ fun SettingsScreen(
                             ClipData.newPlainText("adb-dpm", adbCommand)
                         )
                         toast(R.string.adb_copied)
+                    }
+                )
+            }
+
+            // ---- Lock method ----
+            SectionLabel(R.string.section_method)
+            SettingsGroup {
+                PrefItem(
+                    icon = Icons.Outlined.Fingerprint,
+                    title = stringResource(R.string.method_power_title),
+                    subtitle = stringResource(if (powerLock) R.string.method_power_on else R.string.method_power_off),
+                    trailing = {
+                        TextButton(onClick = {
+                            openAccessibilitySettings(context)
+                            if (!powerLock) toast(R.string.method_power_hint)
+                        }) { Text(stringResource(if (powerLock) R.string.btn_manage else R.string.btn_turn_on)) }
                     }
                 )
             }
@@ -444,6 +470,28 @@ fun SettingsScreen(
                 }
             }
 
+            // Placement outline + armed flash apply in every widget style.
+            SettingsGroup {
+                PrefItem(
+                    icon = Icons.Outlined.CropFree,
+                    title = stringResource(R.string.opt_show_outline),
+                    subtitle = stringResource(R.string.opt_show_outline_sub),
+                    trailing = {
+                        ThemedSwitch(showOutline) { v -> prefs.showOutline = v; showOutline = v; refreshWidgets() }
+                    },
+                    onClick = { val v = !showOutline; prefs.showOutline = v; showOutline = v; refreshWidgets() }
+                )
+                PrefItem(
+                    icon = Icons.Outlined.FlashOn,
+                    title = stringResource(R.string.opt_armed_flash),
+                    subtitle = stringResource(R.string.opt_armed_flash_sub),
+                    trailing = {
+                        ThemedSwitch(armedFlash) { v -> prefs.armedFlash = v; armedFlash = v; refreshWidgets() }
+                    },
+                    onClick = { val v = !armedFlash; prefs.armedFlash = v; armedFlash = v; refreshWidgets() }
+                )
+            }
+
             // ---- Lock triggers ----
             SectionLabel(R.string.section_triggers)
             SettingsGroup {
@@ -452,7 +500,13 @@ fun SettingsScreen(
                     title = stringResource(R.string.trigger_widget),
                     subtitle = stringResource(R.string.trigger_widget_sub),
                     trailing = { ChevronAction() },
-                    onClick = { requestPinWidget(context, snackbar, scope) }
+                    onClick = {
+                        // A new zone is invisible, so switch the outline on to find and resize it.
+                        prefs.showOutline = true
+                        showOutline = true
+                        refreshWidgets()
+                        requestPinWidget(context, snackbar, scope)
+                    }
                 )
                 PrefItem(
                     icon = Icons.Outlined.AppSettingsAlt,
@@ -556,7 +610,7 @@ fun SettingsScreen(
 // ------------------------------------------------------------------ hero
 
 @Composable
-private fun HeroCard(adminActive: Boolean, lastLockAt: Long, onPrimary: () -> Unit) {
+private fun HeroCard(ready: Boolean, lastLockAt: Long, onPrimary: () -> Unit) {
     val extras = QuickLockTheme.extras
     Box(
         Modifier
@@ -589,13 +643,23 @@ private fun HeroCard(adminActive: Boolean, lastLockAt: Long, onPrimary: () -> Un
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
+                // Installed version, so it is obvious which build is running.
+                Text(
+                    stringResource(R.string.version_chip, BuildConfig.VERSION_NAME),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.18f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                )
             }
             Spacer(Modifier.height(18.dp))
-            StatusPill(adminActive)
+            StatusPill(ready)
             Spacer(Modifier.height(18.dp))
             HeroButton(
-                text = stringResource(if (adminActive) R.string.btn_test_lock else R.string.btn_activate),
-                icon = if (adminActive) Icons.Filled.Lock else Icons.Outlined.Shield,
+                text = stringResource(if (ready) R.string.btn_test_lock else R.string.btn_activate),
+                icon = if (ready) Icons.Filled.Lock else Icons.Outlined.Shield,
                 onClick = onPrimary
             )
             Spacer(Modifier.height(10.dp))
@@ -1320,7 +1384,25 @@ private fun requestPinWidget(context: Context, snackbar: SnackbarHostState, scop
     val manager = AppWidgetManager.getInstance(context)
     val ok = manager.isRequestPinAppWidgetSupported &&
         manager.requestPinAppWidget(ComponentName(context, LockWidgetProvider::class.java), null, null)
-    if (!ok) scope.launch { snackbar.showSnackbar(context.getString(R.string.trigger_widget_manual)) }
+    val msg = if (ok) R.string.trigger_widget_placed else R.string.trigger_widget_manual
+    scope.launch {
+        snackbar.showSnackbar(context.getString(msg), withDismissAction = true, duration = SnackbarDuration.Long)
+    }
+}
+
+/** Opens Quick Lock's own accessibility page where possible, else the accessibility list. */
+private fun openAccessibilitySettings(context: Context) {
+    val component = ComponentName(context, LockAccessibilityService::class.java).flattenToString()
+    val details = Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
+        .putExtra(Intent.EXTRA_COMPONENT_NAME, component)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(details)
+    } catch (_: Exception) {
+        context.startActivity(
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
 }
 
 private fun requestAddTile(context: Context, snackbar: SnackbarHostState, scope: CoroutineScope) {

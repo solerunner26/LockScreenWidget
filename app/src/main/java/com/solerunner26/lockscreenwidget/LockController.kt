@@ -17,17 +17,23 @@ enum class LockResult {
 }
 
 /**
- * Single place where the privileged lock happens.
- *
- * The ONLY privileged call in the entire app is [DevicePolicyManager.lockNow],
- * which requires device-admin status with the force-lock policy. Because the app
- * never registers an accessibility service, it has no ability to read the screen,
- * notifications, OTPs or any other content.
+ * Single place where the lock happens. Two ways, in order:
+ *  1. [LockAccessibilityService.lockScreen] — optional "power-button lock"; keeps
+ *     fingerprint unlock working. The service is configured blind (no window
+ *     content, no events), so it cannot read the screen.
+ *  2. [DevicePolicyManager.lockNow] — device admin, force-lock policy only. Android
+ *     then requires the PIN for the next unlock ("locked by work policy").
  */
 object LockController {
 
     fun adminComponent(context: Context): ComponentName =
         ComponentName(context, LockDeviceAdminReceiver::class.java)
+
+    /** The power-button lock (accessibility) is enabled and connected. */
+    fun isPowerButtonLockOn(): Boolean = LockAccessibilityService.isRunning
+
+    /** At least one lock method is available. */
+    fun canLock(context: Context): Boolean = isPowerButtonLockOn() || isAdminActive(context)
 
     fun isAdminActive(context: Context): Boolean {
         val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
@@ -44,6 +50,10 @@ object LockController {
      * from any context.
      */
     fun tryLock(context: Context): LockResult {
+        if (LockAccessibilityService.lockScreen()) {
+            Prefs.get(context).lastLockAt = System.currentTimeMillis()
+            return LockResult.LOCKED
+        }
         val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
             ?: return LockResult.ERROR
         if (!isAdminActive(context)) return LockResult.ADMIN_MISSING

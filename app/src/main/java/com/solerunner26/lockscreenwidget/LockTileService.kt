@@ -24,7 +24,7 @@ class LockTileService : TileService() {
             state = Tile.STATE_INACTIVE
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 subtitle = getString(
-                    if (LockController.isAdminActive(applicationContext)) R.string.tile_subtitle_ready
+                    if (LockController.canLock(applicationContext)) R.string.tile_subtitle_ready
                     else R.string.tile_subtitle_setup
                 )
             }
@@ -34,7 +34,7 @@ class LockTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        if (LockController.isAdminActive(applicationContext)) {
+        if (LockController.canLock(applicationContext)) {
             LockController.lock(applicationContext)
         } else {
             // A tile may not start activities directly on Android 14+; it must

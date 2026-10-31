@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Optional power-button lock (LockAccessibilityService). Configured to be BLIND:
+   * canRetrieveWindowContent="false" -> cannot read anything on screen
+   * no accessibilityEventTypes        -> receives no events at all
+   * packageNames = Quick Lock only    -> and even then, only from this app
+   * no gesture / key-filter / screenshot / touch-exploration capabilities
+  The validator fails the build if any of this changes.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault"
+    android:canRetrieveWindowContent="false"
+    android:description="@string/a11y_description"
+    android:isAccessibilityTool="false"
+    android:notificationTimeout="0"
+    android:packageNames="com.solerunner26.lockscreenwidget" />

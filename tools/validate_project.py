@@ -13,9 +13,11 @@ This script is the executable test harness that DOES run here; it verifies:
   4. Kotlin sources are structurally sane (package matches path, balanced
      braces/parens/brackets outside strings/comments).
   5. SECURITY POLICY assertions:
-       - the only permission is VIBRATE (no INTERNET, no accessibility, no overlay)
+       - the only permission is VIBRATE (no INTERNET, no overlay)
        - device-admin policies contain ONLY <force-lock/>
-       - no accessibility service is declared anywhere
+       - at most ONE accessibility service (optional power-button lock), and it is
+         BLIND: no window content, no event types, own package only, no gesture/
+         key/screenshot capabilities, and its code only calls GLOBAL_ACTION_LOCK_SCREEN
        - updatePeriodMillis = 0 (zero battery), resizeMode both axes (adjustable area)
        - allowBackup=false, data-extraction excludes everything
        - every component has an explicit android:exported
@@ -234,10 +236,39 @@ manifest_text = re.sub(r"<uses-permission[^>]*tools:node=\"remove\"[^>]*/>", "",
 for banned in ("INTERNET", "ACCESS_NETWORK_STATE", "SYSTEM_ALERT_WINDOW", "WAKE_LOCK",
                "FOREGROUND_SERVICE", "RECEIVE_BOOT_COMPLETED", "READ_SMS", "READ_CONTACTS",
                "CAMERA", "RECORD_AUDIO", "READ_EXTERNAL_STORAGE", "QUERY_ALL_PACKAGES",
-               "BIND_ACCESSIBILITY_SERVICE", "PACKAGE_USAGE_STATS", "REQUEST_INSTALL_PACKAGES"):
+               "PACKAGE_USAGE_STATS", "REQUEST_INSTALL_PACKAGES"):
     check(banned not in manifest_text, f"manifest must not mention {banned}")
-check("accessibility" not in manifest_text.lower().replace("no accessibility", "").replace("never reads", ""),
-      "manifest must not declare an accessibility service")
+
+# 5a2. optional power-button lock: exactly one accessibility service, and it is blind
+A11Y_ACTION = "android.accessibilityservice.AccessibilityService"
+a11y_services = [el for el in app_el.findall("service")
+                 if any(a.get(ANDROID_NS + "name") == A11Y_ACTION
+                        for f in el.findall("intent-filter") for a in f.findall("action"))]
+check(len(a11y_services) <= 1, f"at most one accessibility service allowed, got {len(a11y_services)}")
+check(manifest_text.count("BIND_ACCESSIBILITY_SERVICE") == len(a11y_services),
+      "BIND_ACCESSIBILITY_SERVICE may only appear as the accessibility service's permission")
+for el in a11y_services:
+    check(el.get(ANDROID_NS + "name") == ".LockAccessibilityService",
+          "the accessibility service must be .LockAccessibilityService")
+    check(el.get(ANDROID_NS + "permission") == "android.permission.BIND_ACCESSIBILITY_SERVICE",
+          "accessibility service must require BIND_ACCESSIBILITY_SERVICE")
+    metas = {m.get(ANDROID_NS + "name"): m.get(ANDROID_NS + "resource") for m in el.findall("meta-data")}
+    check(metas.get("android.accessibilityservice") == "@xml/lock_accessibility_service",
+          "accessibility service must use @xml/lock_accessibility_service")
+    a11y_xml = parsed[os.path.join(RES, "xml", "lock_accessibility_service.xml")].getroot()
+    attrs = {k.replace(ANDROID_NS, ""): v for k, v in a11y_xml.attrib.items()}
+    check(attrs.get("canRetrieveWindowContent") == "false",
+          "accessibility service must set canRetrieveWindowContent=false (cannot read the screen)")
+    check("accessibilityEventTypes" not in attrs,
+          "accessibility service must subscribe to NO event types")
+    check(attrs.get("packageNames") == "com.solerunner26.lockscreenwidget",
+          "accessibility service must be limited to its own package")
+    check(attrs.get("accessibilityFlags", "flagDefault") == "flagDefault",
+          f"accessibility service flags must be flagDefault only, got {attrs.get('accessibilityFlags')}")
+    for cap in ("canRequestFilterKeyEvents", "canPerformGestures", "canTakeScreenshot",
+                "canRequestTouchExplorationMode", "canRequestFingerprintGestures",
+                "canControlMagnification", "canRequestEnhancedWebAccessibility"):
+        check(attrs.get(cap, "false") == "false", f"accessibility service must not request {cap}")
 
 # 5b. device admin policies: only force-lock
 admin_xml = parsed[os.path.join(RES, "xml", "device_admin_policies.xml")].getroot()
@@ -328,12 +359,29 @@ for dirpath, _, files in os.walk(KOTLIN_DIR):
         if f.endswith(".kt"):
             all_main_src += open(os.path.join(dirpath, f), encoding="utf-8").read()
 
-for banned in ("AccessibilityService", "android.util.Log", "Log.d(", "Log.e(",
+# The power-button lock service may only perform the lock-screen global action.
+a11y_src = read_main("LockAccessibilityService")
+check(set(re.findall(r"GLOBAL_ACTION_\w+", a11y_src)) == {"GLOBAL_ACTION_LOCK_SCREEN"},
+      "LockAccessibilityService may only use GLOBAL_ACTION_LOCK_SCREEN")
+for banned in ("rootInActiveWindow", "getRootInActiveWindow", "windows", "getWindows",
+               "AccessibilityNodeInfo", "dispatchGesture", "takeScreenshot", "event.source",
+               "getSource", "serviceInfo", "setServiceInfo", "softKeyboardController",
+               "fingerprintGestureController", "magnificationController", "event.text",
+               "getText", "packageName"):
+    check(banned not in strip_strings_and_comments(a11y_src),
+          f"LockAccessibilityService must not use {banned!r} (it must stay blind)")
+for banned in ("android.util.Log", "Log.d(", "Log.e(",
                "HttpURLConnection", "java.net.URL", "Socket(", "OkHttp", "Retrofit",
                "AlarmManager", "WakeLock", "startForegroundService", "WorkManager",
                "JobScheduler", "RECEIVE_BOOT_COMPLETED", "MediaProjection", "MediaRecorder",
                "ContentResolver", "query("):
     check(banned not in all_main_src, f"main sources must not contain {banned!r}")
+for dirpath, _, files in os.walk(KOTLIN_DIR):
+    for f in files:
+        if f.endswith(".kt") and f != "LockAccessibilityService.kt":
+            src = open(os.path.join(dirpath, f), encoding="utf-8").read().replace("LockAccessibilityService", "")
+            check("AccessibilityService" not in src and "accessibilityservice" not in src,
+                  f"{f}: accessibility APIs are only allowed in LockAccessibilityService.kt")
 
 # lockNow is the only privileged call
 check("lockNow()" in read_main("LockController"), "LockController must call lockNow()")

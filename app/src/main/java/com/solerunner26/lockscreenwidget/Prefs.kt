@@ -62,6 +62,16 @@ class Prefs private constructor(private val sp: SharedPreferences) {
         get() = sp.getBoolean("show_icon", false)
         set(value) = sp.edit().putBoolean("show_icon", value).apply()
 
+    /** Dashed outline + hint on the widget so a new invisible zone can be found and resized. */
+    var showOutline: Boolean
+        get() = sp.getBoolean("show_outline", false)
+        set(value) = sp.edit().putBoolean("show_outline", value).apply()
+
+    /** Brief flash after the first tap of a double tap. Off = the zone never shows anything. */
+    var armedFlash: Boolean
+        get() = sp.getBoolean("armed_flash", true)
+        set(value) = sp.edit().putBoolean("armed_flash", value).apply()
+
     var showLabel: Boolean
         get() = sp.getBoolean("show_label", false)
         set(value) = sp.edit().putBoolean("show_label", value).apply()

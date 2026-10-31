@@ -6,8 +6,9 @@
    * The ONLY permission requested is VIBRATE (normal/install-time, used for the
      lock confirmation buzz). There is deliberately NO:
        - INTERNET / ACCESS_NETWORK_STATE  -> the app physically cannot send data anywhere
-       - accessibility service             -> the app physically cannot read the screen,
-                                              OTPs, notifications or anything else
+   * The OPTIONAL accessibility service (power-button lock, off until the user turns
+     it on) is configured blind: canRetrieveWindowContent=false and no event types,
+     so it cannot read the screen, OTPs, notifications or anything else.
        - SYSTEM_ALERT_WINDOW               -> no floating overlay over other apps
        - WAKE_LOCK / FOREGROUND_SERVICE / RECEIVE_BOOT_COMPLETED -> zero battery cost
    * allowBackup=false + full data-extraction excludes -> settings never leave the device
@@ -126,6 +127,23 @@
                 android:name="android.app.device_admin"
                 android:resource="@xml/device_admin_policies" />
         </receiver>
+
+        <!-- OPTIONAL power-button lock: locks like the power button so fingerprint
+             unlock keeps working (device-admin lockNow forces the PIN). Bound only by
+             the system (BIND_ACCESSIBILITY_SERVICE). Blind by configuration — see
+             res/xml/lock_accessibility_service.xml. -->
+        <service
+            android:name=".LockAccessibilityService"
+            android:exported="true"
+            android:label="@string/a11y_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/lock_accessibility_service" />
+        </service>
 
         <!-- Optional Quick Settings tile ("Lock screen"). Bound with
              BIND_QUICK_SETTINGS_TILE so only the system can bind it. The service is

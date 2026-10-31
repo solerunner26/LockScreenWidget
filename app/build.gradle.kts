@@ -5,7 +5,7 @@ plugins {
 }
 
 // Bump the major/minor here for big releases; CI appends the run number.
-val BASE_VERSION = "2.1"
+val BASE_VERSION = "2.2"
 val VERSION_CODE_OFFSET = 100 // keeps CI codes above every earlier release (max 3)
 
 android {

@@ -99,6 +99,7 @@ class LockWidgetProvider : AppWidgetProvider() {
         private const val REQUEST_SETUP = 1002
         private const val DISARM_SLACK_MS = 60L
         private val ARMED_TINT = 0xFF6D4AC8.toInt() // violet flash for the "tap again" state
+        private val OUTLINE_TEXT = 0xFFFFFFFF.toInt()
 
         /**
          * Re-renders every placed widget. Called in-process (settings changes,
@@ -116,19 +117,27 @@ class LockWidgetProvider : AppWidgetProvider() {
 
             // The ENTIRE widget area is the tap target: the user decides how big the
             // lock zone is by resizing the widget on the home screen. Until device
-            // admin is granted, a tap opens the setup screen directly (an activity
+            // a lock method is enabled, a tap opens the setup screen directly (an activity
             // PendingIntent is always allowed to start, unlike a background launch).
-            val adminActive = LockController.isAdminActive(context)
+            val ready = LockController.canLock(context)
             views.setOnClickPendingIntent(
                 R.id.widget_root,
-                if (adminActive) tapPendingIntent(context) else setupPendingIntent(context)
+                if (ready) tapPendingIntent(context) else setupPendingIntent(context)
             )
 
             val now = SystemClock.elapsedRealtime()
-            val armed = adminActive && prefs.gestureMode == Prefs.MODE_DOUBLE_TAP &&
+            val armed = ready && prefs.armedFlash && prefs.gestureMode == Prefs.MODE_DOUBLE_TAP &&
                 TapGestureLogic.isDoubleTap(prefs.lastTapAt, now, prefs.tapWindowMs)
 
-            if (prefs.showIcon) {
+            if (prefs.showOutline && !armed) {
+                // Placement aid: dashed frame + hint so a freshly added (otherwise
+                // invisible) zone can be found, moved and resized. Turned off in the app.
+                views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_outline)
+                views.setViewVisibility(R.id.widget_icon, View.GONE)
+                views.setViewVisibility(R.id.widget_label, View.VISIBLE)
+                views.setTextViewText(R.id.widget_label, context.getString(R.string.widget_outline_hint))
+                views.setTextColor(R.id.widget_label, OUTLINE_TEXT)
+            } else if (prefs.showIcon) {
                 // Visible mode: lock icon (+ optional label) with a configurable background.
                 views.setViewVisibility(R.id.widget_icon, View.VISIBLE)
                 views.setImageViewResource(R.id.widget_icon, R.drawable.ic_lock_widget)
@@ -153,13 +162,13 @@ class LockWidgetProvider : AppWidgetProvider() {
                     views.setViewVisibility(R.id.widget_label, View.GONE)
                 }
             } else {
-                // Default: fully invisible lock zone — no icon, no label, no background.
-                // Only a brief subtle flash after the first tap of a double tap ("armed").
+                // Default: 100% transparent lock zone — no icon, no label, no background
+                // at all (resource 0 removes it). Optional brief flash when armed.
                 views.setViewVisibility(R.id.widget_icon, View.GONE)
                 views.setViewVisibility(R.id.widget_label, View.GONE)
                 views.setInt(
                     R.id.widget_root, "setBackgroundResource",
-                    if (armed) R.drawable.widget_bg_armed else R.drawable.widget_bg_transparent
+                    if (armed) R.drawable.widget_bg_armed else 0
                 )
             }
 

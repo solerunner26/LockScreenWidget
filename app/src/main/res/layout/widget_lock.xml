@@ -7,7 +7,7 @@
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_bg_translucent"
+    android:background="@android:color/transparent"
     android:padding="8dp">
 
     <LinearLayout
@@ -22,7 +22,8 @@
             android:layout_width="28dp"
             android:layout_height="28dp"
             android:contentDescription="@string/widget_name"
-            android:src="@drawable/ic_lock_widget" />
+            android:src="@drawable/ic_lock_widget"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/widget_label"
@@ -31,7 +32,10 @@
             android:layout_marginStart="8dp"
             android:text="@string/widget_label"
             android:textColor="#FFFFFF"
-            android:textSize="14sp"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:shadowColor="#99000000"
+            android:shadowRadius="4"
             android:visibility="gone" />
     </LinearLayout>
 </FrameLayout>

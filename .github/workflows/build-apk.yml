@@ -127,7 +127,7 @@ jobs:
             if ! echo "$BADGING" | grep -q "android.permission.VIBRATE"; then
               echo "::error::$APK does not request VIBRATE"; FAIL=1
             fi
-            if echo "$BADGING" | grep -qE "INTERNET|ACCESS_NETWORK_STATE|SYSTEM_ALERT_WINDOW|WAKE_LOCK|FOREGROUND_SERVICE|BOOT_COMPLETED|BIND_ACCESSIBILITY|READ_SMS|CAMERA|RECORD_AUDIO|READ_CONTACTS"; then
+            if echo "$BADGING" | grep "^uses-permission" | grep -qE "INTERNET|ACCESS_NETWORK_STATE|SYSTEM_ALERT_WINDOW|WAKE_LOCK|FOREGROUND_SERVICE|BOOT_COMPLETED|BIND_ACCESSIBILITY|READ_SMS|CAMERA|RECORD_AUDIO|READ_CONTACTS|REQUEST_INSTALL_PACKAGES"; then
               echo "::error::SECURITY FAILURE: $APK requests a forbidden permission"; FAIL=1
             fi
             # The device-admin receiver must survive minification/shrinking and stay
