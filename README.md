@@ -1,5 +1,7 @@
 # Quick Lock — private double-tap screen-lock widget for Android
 
+> **Developing further?** See **[HANDOVER.md](HANDOVER.md)** — full architecture map, build/test/CI instructions, on-device ADB cheat sheet, and a ready-to-paste prompt for Codex/Claude Code.
+
 A tiny, fully open-source Android app that puts a **resizable lock zone on your home
 screen**: **double-tap it and the phone locks instantly**. Built for people who are
 worried about apps that ask for the **accessibility service** (the permission that
