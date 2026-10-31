@@ -10,7 +10,7 @@ agent is in the last section.
   - Direct APK: `https://github.com/solerunner26/LockScreenWidget/releases/download/v1.0.0/app-release.apk`
   - Debug APK: `https://github.com/solerunner26/LockScreenWidget/releases/download/v1.0.0/app-debug.apk`
 - **Package:** `com.solerunner26.lockscreenwidget` · Admin receiver: `com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver`
-- **Stack:** Kotlin 2.0.21, AGP 8.9.0, Gradle wrapper 8.11.1, compileSdk/targetSdk 36, minSdk 26, Jetpack Compose + Material 3 (BOM 2024.12.01), activity-compose 1.9.3, lifecycle-runtime-compose 2.8.7.
+- **Stack (v2.0.0):** Kotlin 2.2.21, AGP 8.13.2, Gradle wrapper 8.13, compileSdk/targetSdk 36, minSdk 26, Jetpack Compose BOM 2026.06.01 (Material 3 1.4.0), activity-compose 1.13.0, lifecycle-runtime-compose 2.10.0. (BOM 2026.08+ needs compileSdk 37 + AGP 9.1 — a separate migration.)
 
 ---
 
@@ -32,7 +32,7 @@ Google Pixel 10 Pro on Android 17 beta):
 3. **Never read the screen**: no accessibility service, no content URIs of other apps, no notifications access.
 4. **Screen-recording/screenshot resistant**: all activities keep `FLAG_SECURE`.
 5. **Zero battery**: `updatePeriodMillis="0"`, no services, alarms, receivers that wake, no wake locks. Verify on device with `dumpsys power | grep -i wakelock` (should list none from our package).
-6. **Minimal attack surface**: every component has explicit `android:exported`; all PendingIntents are `FLAG_IMMUTABLE`; the widget's custom tap action checks the caller UID (own app or SYSTEM only); `allowBackup=false` + full data-extraction excludes.
+6. **Minimal attack surface**: every component has explicit `android:exported`; all PendingIntents are `FLAG_IMMUTABLE`; the widget's custom tap action carries a per-install secret token (`Prefs.tapToken`) that `LockWidgetProvider` verifies — note `Binder.getCallingUid()` inside `onReceive` always returns our own UID, so a UID check there protects nothing; `allowBackup=false` + full data-extraction excludes.
 7. **Resource shrinking stays OFF** in release (`isShrinkResources = false`) — the shrinker can drop manifest-meta-data-only resources such as `device_admin_policies.xml`. R8/minify stays on.
 8. Widget meta: `resizeMode="horizontal|vertical"`, min/max resize bounds, `widgetCategory="home_screen"`.
 9. Keep `tools/validate_project.py` (317 checks) and `tools/logic_spec_test.py` green after every change.
@@ -41,7 +41,7 @@ Google Pixel 10 Pro on Android 17 beta):
 
 | File | Purpose |
 |---|---|
-| `app/src/main/AndroidManifest.xml` | Only VIBRATE permission; application `allowBackup=false`; `SettingsActivity` (FLAG_SECURE via theme/window), `LockNowActivity` (translucent, FLAG_SECURE), `LockWidgetProvider` receiver (custom action + uid check), `LockDeviceAdminReceiver` (label+description, meta-data `android.app.admin.device_admin` → `@xml/device_admin_policies`), `LockTileService` (QS tile, requires BIND_QUICK_SETTINGS_TILE... declared properly), static shortcuts. |
+| `app/src/main/AndroidManifest.xml` | Only VIBRATE permission; application `allowBackup=false`; `SettingsActivity` (FLAG_SECURE via theme/window), `LockNowActivity` (translucent, FLAG_SECURE), `LockWidgetProvider` receiver (custom action + uid check), `LockDeviceAdminReceiver` (label+description, meta-data `android.app.device_admin` → `@xml/device_admin_policies`), `LockTileService` (QS tile, requires BIND_QUICK_SETTINGS_TILE... declared properly), static shortcuts. |
 | `LockDeviceAdminReceiver.kt` | Empty `DeviceAdminReceiver` subclass; capability comes from the XML policy. |
 | `LockController.kt` | The single privileged call site: `isAdminActive()` + `tryLock()` → `dpm.lockNow()`, haptic buzz, result enum `LOCKED / ADMIN_MISSING / ERROR`. |
 | `LockWidgetProvider.kt` | `AppWidgetProvider`: renders the widget per prefs (invisible default; armed flash), detects double-tap from two taps within `tapWindowMs`, then `LockController.tryLock()`; PendingIntent with `FLAG_IMMUTABLE`, own-uid/SYSTEM_UID caller guard on the custom action. |
@@ -90,7 +90,7 @@ adb install app-release.apk
 
 # device admin — the reliable bypass if the Settings list/dialog fails:
 adb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver
-adb shell dpm list-active-admins                       # verify Quick Lock is listed
+adb shell dumpsys device_policy | grep -A2 "Enabled Device Admins"   # verify (dpm list-active-admins no longer exists on Android 17)
 adb shell pm dump com.solerunner26.lockscreenwidget | grep -i -A2 admin   # receiver registration
 
 # logs
@@ -103,20 +103,38 @@ adb logcat -s LockWidgetProvider LockController SettingsActivity ActivityManager
 #            adb shell dumpsys batterystats | grep -i lockscreenwidget
 ```
 
-Settings UI path for admin list on Pixel: **Settings → Security & privacy → More security settings → Device admin apps**.
+Settings UI path for admin list on Pixel: **Settings → Security & privacy → More security & privacy → Device admin**.
 If the app is missing there on the Android 17 beta: check **Device Protection (Advanced Protection)** —
 Settings → Security & privacy → Advanced Protection. If ON, it can block sideloaded apps from
 admin activation: turn it OFF, install + activate, then turn it back ON. (Documented in-app under Help → "Device admin not listed?".)
 
 ## 6. Current state & open issues
 
-- CI green at HEAD (see `gh run list -L 1`); release v1.0.0 assets are current.
-- **Open issue (user's device):** on the Pixel 10 Pro / Android 17 beta, the app did not appear in
-  "Device admin apps" and the Activate button seemed to do nothing with earlier builds. The current APK is
-  CI-verified to contain receiver + meta-data + policies resource, and the app ships ADB fallback + diagnostics.
-  Next diagnostics on-device (see §5 commands). If `pm dump ... | grep admin` shows the receiver but Settings
-  still hides it, it is almost certainly Device Protection / OS-level policy on the beta — document it.
-- Known environment quirk: CI uses `--stop` between debug/release builds and 6g heaps (Compose release builds crashed the Kotlin daemon otherwise).
+**RESOLVED (v2.0.0, verified on an Android 17 / API 37 emulator): app missing from "Device admin apps".**
+Root cause: the manifest meta-data key was `android.app.admin.device_admin`; the platform key is
+`android.app.device_admin` (`DeviceAdminReceiver.DEVICE_ADMIN_META_DATA`). Settings logged
+`DeviceAdminListPrefCtrl: Skipping ... XmlPullParserException: No android.app.device_admin meta-data`,
+and the old validator + CI were checking for the *wrong* key, so every build "passed". Also added the
+required `DEVICE_ADMIN_ENABLED` intent-filter. Validator and CI now enforce the correct key, reject the
+wrong one, and require the intent-filter. Verified on the emulator: app listed → toggle → system dialog
+("Lock the screen" only) → activated → `lockNow()` turned the screen off.
+
+Other v2.0.0 fixes:
+- Widget "armed" flash never cleared (no redraw after the double-tap window) → one-shot redraw via
+  `goAsync()` + `Handler.postDelayed(tapWindow + 60 ms)` inside the tap broadcast (no alarm, no service).
+- Widget/tile taps without admin now open setup through activity PendingIntents
+  (`startActivityAndCollapse(PendingIntent)` on API 34+); background activity starts were blocked.
+- Caller-UID guard replaced with a secret token (see constraint 6). Custom actions no longer have
+  intent-filters; `ACTION_REFRESH` removed — widgets refresh in-process via `LockWidgetProvider.updateAll()`.
+- The direct `Settings$DeviceAdminSettingsActivity` deep link lands on the Settings home on Android 17, so
+  the app opens `ACTION_SECURITY_SETTINGS` and shows the path instead.
+- Sideloaded APKs on Android 13+ may hit "Restricted settings": App info → ⋮ → Allow restricted settings
+  (button on the setup card; documented under Help).
+- androidx injects a signature-level `<pkg>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` into the merged
+  manifest. It grants nothing to anyone else; the CI denylist allows it.
+
+Local build without CI: JDK 21 (`~/.jdks/jbr-21.0.11`) + `./gradlew assembleRelease`, then zipalign +
+apksigner with the debug keystore gives a stable signature across local builds (no uninstall needed).
 
 ## 7. Ideas for further development (pick with the user)
 
@@ -151,7 +169,7 @@ HARD CONSTRAINTS (CI + tools/validate_project.py enforce these; never violate):
 4. Widget: updatePeriodMillis=0, resizeMode horizontal|vertical, freely positionable;
    invisible/transparent by default.
 5. Every component: explicit android:exported; PendingIntents FLAG_IMMUTABLE; the
-   widget's custom broadcast checks caller UID (own app or SYSTEM). allowBackup=false.
+   widget's custom broadcast verifies a per-install secret token. allowBackup=false.
 6. Release build: isMinifyEnabled=true but isShrinkResources=false (the shrinker drops
    device_admin_policies.xml). UI: Jetpack Compose + Material 3, violet #6D4AC8 ->
    magenta #C94FA0 gradient, dark mode, uniform gradient buttons, Help menu instead of
@@ -164,10 +182,10 @@ CI: pushing to the branch builds both APKs and re-uploads them to release v1.0.0
 key, so on a phone always: adb uninstall com.solerunner26.lockscreenwidget && adb install.
 On-device admin activation fallback (Pixel/Android 17 beta):
 adb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver
-verify: adb shell dpm list-active-admins
+verify: adb shell dumpsys device_policy | grep -A2 "Enabled Device Admins"
 
 CURRENT OPEN ISSUE: on the user's Pixel 10 Pro (Android 17 beta) the app previously did not
-show in Settings -> Security & privacy -> More security settings -> Device admin apps.
+show in Settings -> Security & privacy -> More security & privacy -> Device admin.
 Current APK is CI-verified to contain the admin receiver + meta-data + policies resource.
 If you work on this: run the §5 diagnostics on-device, consider Device Protection
 (Advanced Protection) blocking sideloaded apps, and keep the in-app fallbacks working.

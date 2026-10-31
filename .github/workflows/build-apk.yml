@@ -122,8 +122,13 @@ jobs:
             if ! echo "$MTREE" | grep -q "LockDeviceAdminReceiver"; then
               echo "::error::$APK: manifest is missing LockDeviceAdminReceiver"; FAIL=1
             fi
-            if ! echo "$MTREE" | grep -q "android.app.admin.device_admin"; then
-              echo "::error::$APK: manifest is missing android.app.admin.device_admin meta-data"; FAIL=1
+            if ! echo "$MTREE" | grep -q "android.app.device_admin"; then
+              echo "::error::$APK: manifest is missing android.app.device_admin meta-data"; FAIL=1
+            fi
+            # Without this intent-filter Settings hides the app from "Device admin
+            # apps" and the activation dialog silently refuses it.
+            if ! echo "$MTREE" | grep -q "android.app.action.DEVICE_ADMIN_ENABLED"; then
+              echo "::error::$APK: admin receiver is missing the DEVICE_ADMIN_ENABLED intent-filter"; FAIL=1
             fi
             # (resource file paths are shortened in release APKs, so check the
             # resource TABLE, not the zip entry names)

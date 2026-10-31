@@ -2,6 +2,7 @@ package com.solerunner26.lockscreenwidget
 
 import android.content.Context
 import android.content.SharedPreferences
+import java.security.SecureRandom
 
 /**
  * App settings. Stored in a MODE_PRIVATE SharedPreferences file (never exported),
@@ -25,6 +26,15 @@ class Prefs private constructor(private val sp: SharedPreferences) {
         const val THEME_SYSTEM = 0
         const val THEME_LIGHT = 1
         const val THEME_DARK = 2
+
+        // Color palettes (see ui/theme/Palettes.kt). Stored by id, never by index
+        // into a list, so reordering the picker never changes a user's choice.
+        const val PALETTE_AURORA = 0
+        const val PALETTE_OCEAN = 1
+        const val PALETTE_SUNSET = 2
+        const val PALETTE_FOREST = 3
+        const val PALETTE_MIDNIGHT = 4
+        const val PALETTE_DYNAMIC = 5
 
         @JvmStatic
         fun get(context: Context): Prefs =
@@ -60,6 +70,10 @@ class Prefs private constructor(private val sp: SharedPreferences) {
         get() = sp.getInt("theme_mode", THEME_SYSTEM)
         set(value) = sp.edit().putInt("theme_mode", value).apply()
 
+    var palette: Int
+        get() = sp.getInt("palette", PALETTE_AURORA)
+        set(value) = sp.edit().putInt("palette", value).apply()
+
     var haptics: Boolean
         get() = sp.getBoolean("haptics", true)
         set(value) = sp.edit().putBoolean("haptics", value).apply()
@@ -73,4 +87,18 @@ class Prefs private constructor(private val sp: SharedPreferences) {
     var lastLockAt: Long
         get() = sp.getLong("last_lock_at", -1L)
         set(value) = sp.edit().putLong("last_lock_at", value).apply()
+
+    /**
+     * Random per-install secret embedded in the widget's immutable tap PendingIntent.
+     * Other apps can neither read this private prefs file nor the PendingIntent's
+     * extras, so a broadcast without the right token is a forgery and is dropped.
+     */
+    val tapToken: String
+        get() {
+            sp.getString("tap_token", null)?.let { return it }
+            val bytes = ByteArray(16).also { SecureRandom().nextBytes(it) }
+            val token = bytes.joinToString("") { "%02x".format(it) }
+            sp.edit().putString("tap_token", token).commit()
+            return token
+        }
 }

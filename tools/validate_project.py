@@ -202,7 +202,7 @@ for path in kt_files:
     m = re.search(r"^package\s+([\w.]+)", src, flags=re.M)
     check(m is not None, f"{rel}: no package declaration")
     if m:
-        pkg_path = os.path.join(*m.group(1).split("."))
+        pkg_path = "/".join(m.group(1).split("."))
         check(path.replace(os.sep, "/").endswith(pkg_path + "/" + os.path.basename(path)),
               f"{rel}: package {m.group(1)} does not match file path")
     stripped = strip_strings_and_comments(src)
@@ -268,6 +268,22 @@ for el in app_el.findall("service"):
         check(el.get(ANDROID_NS + "permission") == "android.permission.BIND_QUICK_SETTINGS_TILE",
               "tile service must require BIND_QUICK_SETTINGS_TILE")
 
+# device admin receiver must resolve for DEVICE_ADMIN_ENABLED, otherwise Settings
+# hides it from "Device admin apps" and ACTION_ADD_DEVICE_ADMIN silently refuses it
+for el in app_el.findall("receiver"):
+    if "DeviceAdmin" in (el.get(ANDROID_NS + "name") or ""):
+        actions = [a.get(ANDROID_NS + "name") for f in el.findall("intent-filter") for a in f.findall("action")]
+        check("android.app.action.DEVICE_ADMIN_ENABLED" in actions,
+              "device admin receiver must have an intent-filter for DEVICE_ADMIN_ENABLED")
+        metas = {m.get(ANDROID_NS + "name"): m.get(ANDROID_NS + "resource") for m in el.findall("meta-data")}
+        # The key is DeviceAdminReceiver.DEVICE_ADMIN_META_DATA = "android.app.device_admin".
+        # ("android.app.admin.device_admin" is WRONG: Settings logs "No android.app.device_admin
+        # meta-data", skips the app, and the activation dialog refuses it.)
+        check(metas.get("android.app.device_admin") == "@xml/device_admin_policies",
+              "device admin receiver meta-data must be android.app.device_admin -> @xml/device_admin_policies")
+        check("android.app.admin.device_admin" not in metas,
+              "wrong device admin meta-data key android.app.admin.device_admin")
+
 # widget provider must have the appwidget meta-data
 for el in app_el.findall("receiver"):
     if "LockWidgetProvider" in (el.get(ANDROID_NS + "name") or ""):
@@ -290,7 +306,8 @@ for cls in ("SettingsActivity", "LockNowActivity"):
 
 prov = read_main("LockWidgetProvider")
 check("FLAG_IMMUTABLE" in prov, "widget PendingIntent must be FLAG_IMMUTABLE")
-check("Binder.getCallingUid()" in prov, "widget provider must check caller UID on custom actions")
+check("isTokenValid(" in prov and "tapToken" in prov,
+      "widget provider must verify the per-install secret token on custom tap actions")
 check("PendingIntent.getBroadcast" in prov, "widget tap must use an explicit PendingIntent broadcast")
 
 all_main_src = ""

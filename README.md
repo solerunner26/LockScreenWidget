@@ -29,10 +29,15 @@ it does not rely on accessibility at all.
   speed). In invisible mode the zone flashes very subtly after the first tap
   ("armed — tap again").
 - ⚡ **Quick Settings tile** and 📌 **app-icon shortcut** as extra triggers.
-- 🎨 **Material 3 UI (Jetpack Compose)** — two-tone violet→magenta gradient theme,
-  **dark mode** (System / Light / Dark), uniform gradient buttons, your logo as the
-  app icon. All help text (How to use / Privacy & security / About) lives in the
-  **Help** menu (top-right "?").
+- 🎨 **Material 3 UI (Jetpack Compose, Material 3 1.4)** — gradient hero card with live
+  admin status and a one-tap "Lock screen now", Android-16-style grouped settings,
+  segmented buttons, an **interactive live widget preview** (feel your double-tap
+  speed), one-tap "Add widget" / "Add Quick Settings tile", animated theme switching.
+- 🌈 **Six themes** — Aurora (violet→magenta, default), Ocean, Sunset, Forest,
+  **Midnight** (true-black OLED night theme, always dark) and Wallpaper (Material You
+  colors, Android 12+). Each non-night theme supports System / Light / Dark.
+  All help text (How to use / Device admin troubleshooting / Privacy & security /
+  About) lives in the **Help** menu (top-right "?").
 - 🔔 Short vibration + toast when the screen locks (can be disabled).
 - 🔒 **Private by design** — see [Security model](#security-model).
 - 🪶 **Zero battery impact** — see [Battery](#battery).
@@ -70,7 +75,8 @@ After locking, your normal unlock works as usual (fingerprint/face/PIN on Pixel)
   `android:exported`; the device-admin receiver and QS tile are bound only by the
   system (`BIND_DEVICE_ADMIN` / `BIND_QUICK_SETTINGS_TILE`); the widget's custom
   tap broadcast is accepted **only from this app's own immutable PendingIntent or the
-  system** (caller-UID check in `LockWidgetProvider`), so no other app can forge a
+  system** (a random per-install secret token inside the immutable PendingIntent,
+  verified in `LockWidgetProvider`), so no other app can forge a
   lock; the shortcut activity verifies the caller is this app or a real home
   launcher before locking.
 - **All PendingIntents are `FLAG_IMMUTABLE`** and explicitly targeted.
@@ -139,11 +145,11 @@ adb install app/build/outputs/apk/release/app-release.apk
    "App not installed" because each CI build is signed with a different key.
 2. Open **Quick Lock** → tap **"Activate device admin"** → confirm the system dialog.
    If the dialog does not appear, or the app is not listed under
-   **Settings → Security & privacy → More security settings → Device admin apps**, use:
-   - the app's **"Open 'Device admin apps' in Settings"** button, or
+   **Settings → Security & privacy → More security & privacy → Device admin**, use:
+   - the setup card's **App info → Allow restricted settings** button (sideloaded APKs), or
    - the reliable ADB bypass (phone connected to PC, USB debugging on):
      `adb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver`
-     then verify with `adb shell dpm list-active-admins` (the app's status turns green).
+     then verify with `adb shell dumpsys device_policy | grep -A2 "Enabled Device Admins"` (the app's status turns green).
    - On Android 17 beta with **Device Protection (Advanced Protection) ON**, sideloaded apps can be
      blocked: temporarily turn it off (Settings → Security & privacy → Advanced Protection),
      install + activate, then re-enable it. Full steps also in the app: **Help → "Device admin not listed?"**.
@@ -185,7 +191,7 @@ app/src/main/java/com/solerunner26/lockscreenwidget/
     Prefs.kt                                     private local settings
     TapGestureLogic.kt                           pure double-tap logic (unit-tested)
     LockController.kt                            the ONLY privileged call: lockNow()
-    LockWidgetProvider.kt                        widget + double-tap handling + UID guard
+    LockWidgetProvider.kt                        widget + double-tap handling + secret-token guard
     LockDeviceAdminReceiver.kt                   device admin (force-lock only)
     SettingsActivity.kt                          setup & settings (FLAG_SECURE)
     LockNowActivity.kt                           shortcut target (FLAG_SECURE, caller-checked)

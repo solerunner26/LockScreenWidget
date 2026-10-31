@@ -9,71 +9,125 @@
     <string name="widget_label_again">Again!</string>
 
     <string name="tile_label">Lock screen</string>
+    <string name="tile_subtitle_ready">Tap to lock</string>
+    <string name="tile_subtitle_setup">Tap to set up</string>
     <string name="shortcut_lock_now">Lock screen</string>
 
     <string name="admin_explanation">Quick Lock uses device admin only to lock the screen (force-lock). It cannot read your screen or notifications, cannot access your data, cannot wipe the device, and has no internet permission. You can revoke it at any time in Android Settings.</string>
     <string name="admin_receiver_description">Locks the screen on request (force-lock only). No screen reading, no data access, no wipe.</string>
 
-    <string name="help_title">Help</string>
-    <string name="btn_open_admin_settings">Open “Device admin apps” in Settings</string>
-    <string name="admin_component_missing">⚠ Device admin component not detected — please reinstall the app.</string>
-    <string name="hint_admin_fallback">If the activation dialog does not appear, use “Open Device admin apps in Settings” and tap Quick Lock there.</string>
-    <string name="troubleshoot_admin">Android 17 beta note: if Device Protection (Advanced Protection) is ON, apps installed outside the Play Store may be blocked from device-admin activation. Temporarily turn Device Protection off (Settings → Security &amp; privacy → Advanced Protection), activate Quick Lock, then turn it back on.</string>
+    <!-- Hero -->
+    <string name="hero_title">Quick Lock</string>
+    <string name="hero_subtitle">Private double-tap screen lock</string>
+    <string name="status_active">Ready — double-tap your widget</string>
+    <string name="status_inactive">Setup needed</string>
+    <string name="btn_test_lock">Lock screen now</string>
+    <string name="btn_activate">Activate device admin</string>
+    <string name="last_locked_none">Never locked from this app yet</string>
+    <string name="last_locked_at">Last locked %1$s</string>
 
+    <!-- Setup -->
+    <string name="setup_title">One-time setup</string>
+    <string name="setup_body">Allow Quick Lock to lock the screen. It gets the force-lock policy only — nothing else.</string>
+    <string name="setup_fallback_title">Activation dialog not showing?</string>
+    <string name="btn_open_admin_settings">Open Security settings</string>
+    <string name="btn_allow_restricted">App info → Allow restricted settings</string>
     <string name="adb_copy_button">Copy ADB activate command</string>
     <string name="adb_copied">Copied! Paste it in a terminal on your PC (phone connected via USB, USB debugging on).</string>
     <string name="adb_command">adb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver</string>
-    <string name="help_admin_title">Device admin not listed / won’t activate?</string>
-    <string name="help_admin_body">1. Uninstall ANY old Quick Lock build first — adb uninstall com.solerunner26.lockscreenwidget — then install this APK fresh (updates across different builds fail on signature check: “App not installed”).\n2. Install via ADB for reliability: adb install app-release.apk\n3. If Device Protection (Advanced Protection) is ON on your Android 17 beta, it can block sideloaded apps: turn it off (Settings → Security &amp; privacy → Advanced Protection), install + activate, then re-enable it.\n4. Fastest method (bypasses the Settings list): with the phone connected to your PC and USB debugging enabled, run: adb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver — then the app’s status turns green immediately.\n5. Verify: adb shell dpm list-active-admins — you should see Quick Lock / LockDeviceAdminReceiver.\n6. If the app is installed but still not listed, reinstall it (step 1–2) — the receiver registration comes from the APK manifest.</string>
+    <string name="admin_component_missing">⚠ Device admin component not detected — please reinstall the app.</string>
+    <string name="hint_admin_fallback">Scroll to “More security &amp; privacy” → “Device admin” → turn on Quick Lock.</string>
 
-    <string name="section_theme">Appearance</string>
-    <string name="theme_mode_label">Theme</string>
-    <string name="theme_system">System</string>
-    <string name="theme_light">Light</string>
-    <string name="theme_dark">Dark</string>
-    <string name="opt_show_icon">Show lock icon on widget</string>
-    <string name="widget_invisible_note">Widget is invisible by default — the whole area you placed on the home screen is the lock zone.</string>
-
-    <string name="msg_screen_locked">Screen locked</string>
-    <string name="msg_admin_needed">Device admin is not active yet — opening setup…</string>
-    <string name="msg_admin_revoked">Device admin deactivated</string>
-    <string name="msg_lock_failed">Could not lock the screen</string>
-
-    <string name="status_active">● Device admin active — double-tap the widget to lock</string>
-    <string name="status_inactive">● Device admin not active — tap below to enable</string>
-    <string name="btn_activate">Activate device admin</string>
-    <string name="btn_deactivate">Deactivate device admin</string>
-
-    <string name="section_how_to">How to use</string>
-    <string name="how_to_text">1. Long-press your home screen → Widgets → add “Quick Lock”. You can add it several times to create multiple lock zones.\n2. Drag it anywhere you want quick access, then resize it freely (long-press the widget → drag the resize handles).\n3. Double-tap the area to lock the phone instantly.\n4. Optional extra triggers: the “Lock screen” Quick Settings tile, or long-press the app icon → “Lock screen” shortcut.</string>
-
+    <!-- Gesture -->
     <string name="section_gesture">Lock gesture</string>
-    <string name="gesture_single">Single tap locks</string>
-    <string name="gesture_double">Double tap locks (recommended)</string>
+    <string name="gesture_title">Tap to lock</string>
+    <string name="gesture_double">Double tap</string>
+    <string name="gesture_single">Single tap</string>
+    <string name="gesture_double_sub">Recommended — prevents accidental locks</string>
+    <string name="gesture_single_sub">Locks on the first touch</string>
     <string name="speed_label">Double-tap speed</string>
-    <string name="speed_fast">Fast (300 ms)</string>
-    <string name="speed_normal">Normal (450 ms)</string>
-    <string name="speed_slow">Relaxed (600 ms)</string>
+    <string name="speed_sub">Second tap within %1$d ms</string>
+    <string name="speed_fast">Fast</string>
+    <string name="speed_normal">Normal</string>
+    <string name="speed_slow">Relaxed</string>
 
-    <string name="section_look">Widget look</string>
+    <!-- Widget -->
+    <string name="section_look">Widget</string>
+    <string name="preview_title">Live preview</string>
+    <string name="preview_hint">Try it: tap the zone below. Nothing is locked here.</string>
+    <string name="preview_invisible">Invisible lock zone</string>
+    <string name="preview_armed">Tap again</string>
+    <string name="preview_locked">Would lock now</string>
+    <string name="opt_show_icon">Show lock icon</string>
+    <string name="widget_invisible_note">Off — the whole widget area is an invisible lock zone</string>
+    <string name="widget_visible_note">A lock icon marks the zone</string>
     <string name="icon_color_label">Icon color</string>
     <string name="color_white">White</string>
     <string name="color_dark">Dark</string>
     <string name="color_violet">Violet</string>
+    <string name="color_magenta">Magenta</string>
     <string name="bg_label">Background</string>
-    <string name="bg_translucent">Translucent</string>
-    <string name="bg_transparent">Invisible</string>
-    <string name="bg_solid">Solid dark</string>
+    <string name="bg_translucent">Glass</string>
+    <string name="bg_transparent">None</string>
+    <string name="bg_solid">Solid</string>
     <string name="opt_show_label">Show “Lock” label</string>
+
+    <!-- Triggers -->
+    <string name="section_triggers">Lock triggers</string>
+    <string name="trigger_widget">Add lock zone to home screen</string>
+    <string name="trigger_widget_sub">Add as many zones as you like, then resize freely</string>
+    <string name="trigger_widget_manual">Long-press your home screen → Widgets → Quick Lock</string>
+    <string name="trigger_tile">Add Quick Settings tile</string>
+    <string name="trigger_tile_sub">Lock from the notification shade</string>
+    <string name="trigger_tile_manual">Swipe down twice → pencil (Edit) → drag “Lock screen” into your tiles</string>
+    <string name="tile_added">Tile added to Quick Settings</string>
+    <string name="tile_already">The tile is already in Quick Settings</string>
+    <string name="trigger_shortcut">App-icon shortcut</string>
+    <string name="trigger_shortcut_sub">Long-press the Quick Lock icon → “Lock screen”</string>
+
+    <!-- Appearance -->
+    <string name="section_theme">Appearance</string>
+    <string name="theme_palette_label">Theme</string>
+    <string name="palette_aurora">Aurora</string>
+    <string name="palette_ocean">Ocean</string>
+    <string name="palette_sunset">Sunset</string>
+    <string name="palette_forest">Forest</string>
+    <string name="palette_midnight">Midnight</string>
+    <string name="palette_dynamic">Wallpaper</string>
+    <string name="theme_mode_label">Brightness</string>
+    <string name="theme_midnight_note">Midnight is always dark — true black, made for night use</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <!-- General -->
+    <string name="section_general">General</string>
     <string name="opt_haptics">Vibrate when locking</string>
+    <string name="opt_haptics_sub">A short buzz and a toast confirm the lock</string>
+    <string name="admin_item_title">Device admin</string>
+    <string name="admin_item_active">Active · force-lock only</string>
+    <string name="admin_item_inactive">Not active</string>
+    <string name="btn_deactivate">Revoke</string>
+    <string name="btn_enable">Enable</string>
 
-    <string name="btn_test_lock">Lock screen now (test)</string>
-    <string name="last_locked_none">Never locked from this app yet</string>
-    <string name="last_locked_at">Last locked at %1$s</string>
+    <string name="footer_no_internet">No internet</string>
+    <string name="footer_no_a11y">No screen reading</string>
+    <string name="footer_battery">Zero battery</string>
+    <string name="footer_version">Quick Lock %1$s · open source</string>
 
+    <string name="msg_screen_locked">Screen locked</string>
+    <string name="msg_admin_needed">Device admin is not active yet — opening setup…</string>
+    <string name="msg_admin_revoked">Device admin revoked</string>
+    <string name="msg_lock_failed">Could not lock the screen</string>
+
+    <!-- Help -->
+    <string name="help_title">Help</string>
+    <string name="section_how_to">How to use</string>
+    <string name="how_to_text">1. Activate device admin once (big button on the main screen).\n\n2. Tap “Add lock zone to home screen”, or long-press your home screen → Widgets → Quick Lock. Add it several times to create multiple lock zones.\n\n3. Drag it anywhere, then resize it freely (long-press the widget → drag the handles). By default it is completely invisible — the whole area is the tap target.\n\n4. Double-tap the area to lock the phone. After the first tap the zone flashes very subtly (“armed — tap again”).\n\n5. Extra triggers: the “Lock screen” Quick Settings tile, or long-press the app icon → “Lock screen”.</string>
+    <string name="help_admin_title">Device admin troubleshooting</string>
+    <string name="help_admin_body">Quick Lock not in “Device admin apps”, or Activate does nothing?\n\n1. Restricted settings (Android 13+, stricter on Android 15–17): apps installed from a browser or file manager are blocked from device admin until you allow it. Open App info (button on the setup card) → ⋮ menu (top-right) → “Allow restricted settings” → confirm with your fingerprint/PIN. Then tap Activate again.\n\n2. Advanced Protection (Settings → Security &amp; privacy → Advanced Protection): when ON it can block sideloaded apps from admin activation. Turn it off, activate Quick Lock, then turn it back on.\n\n3. Fresh install: different builds are signed with different keys. Uninstall the old Quick Lock first, then install the new APK — otherwise you get “App not installed”.\n\n4. Settings path on Pixel (Android 17): Settings → Security &amp; privacy → More security &amp; privacy → Device admin → Quick Lock.\n\n5. Guaranteed fallback via PC (USB debugging on):\nadb shell dpm set-active-admin --user current com.solerunner26.lockscreenwidget/com.solerunner26.lockscreenwidget.LockDeviceAdminReceiver\nVerify with: adb shell dumpsys device_policy (look for “Enabled Device Admins”)</string>
     <string name="section_privacy">Privacy &amp; security</string>
-    <string name="privacy_text">Why this app is safe:\n\n• It does NOT use the accessibility service — the permission that lets other apps read your screen, OTPs and notifications. Without it, this app physically cannot read anything on your screen.\n\n• It has NO internet permission — it cannot send any data anywhere, ever.\n\n• Device admin is granted with the “force lock” policy only: the app can lock the screen and do nothing else (no wipe, no password changes, no camera/mic). Revoke it anytime under Settings → Security → Device admin apps.\n\n• Zero battery impact: the widget reacts only to your taps (updatePeriodMillis = 0). No background services, no alarms, no boot receivers, no wake locks.\n\n• Every app screen is FLAG_SECURE — it cannot appear in screenshots or screen recordings, so an eavesdropper recording your screen cannot capture this app’s UI.\n\n• It collects, stores and shares no data. Settings live only on this device (private storage, excluded from backup/transfer).\n\n• All exported components are explicitly declared; custom lock intents are accepted only from this app or the system; all PendingIntents are immutable.</string>
-
+    <string name="privacy_text">Why this app is safe:\n\n• It does NOT use the accessibility service — the permission that lets other apps read your screen, OTPs and notifications. Without it, this app physically cannot read anything on your screen.\n\n• It has NO internet permission — it cannot send any data anywhere, ever.\n\n• Device admin is granted with the “force lock” policy only: the app can lock the screen and do nothing else (no wipe, no password changes, no camera/mic). Revoke it anytime here or under Settings → Security → Device admin apps.\n\n• Zero battery impact: the widget reacts only to your taps (updatePeriodMillis = 0). No background services, no alarms, no boot receivers, no wake locks.\n\n• Every app screen is FLAG_SECURE — it cannot appear in screenshots or screen recordings.\n\n• It collects, stores and shares no data. Settings live only on this device (private storage, excluded from backup/transfer).\n\n• Widget taps carry a random per-install secret, so no other app can trigger a lock; all PendingIntents are immutable and every component is explicitly declared.</string>
     <string name="section_about">About</string>
-    <string name="about_text">Quick Lock 1.0.0 — open source: github.com/solerunner26/LockScreenWidget\n\nPermissions used: VIBRATE only (lock-confirmation buzz).\nDevice admin: force-lock only.\nNo internet permission, no accessibility service, no analytics, no ads.\nWorks on Android 8.0+ including the latest Android beta releases.</string>
+    <string name="about_text">Quick Lock %1$s — open source: github.com/solerunner26/LockScreenWidget\n\nPermissions used: VIBRATE only (lock-confirmation buzz).\nDevice admin: force-lock only.\nNo internet permission, no accessibility service, no analytics, no ads.\nWorks on Android 8.0+ including the latest Android beta releases.</string>
 </resources>

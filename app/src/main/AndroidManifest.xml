@@ -12,8 +12,8 @@
        - WAKE_LOCK / FOREGROUND_SERVICE / RECEIVE_BOOT_COMPLETED -> zero battery cost
    * allowBackup=false + full data-extraction excludes -> settings never leave the device
    * Every component declares android:exported explicitly (required on API 31+).
-   * The widget receiver verifies the caller UID of its custom tap action, so no
-     other app can forge a "lock" broadcast.
+   * The widget receiver verifies a per-install secret token on its custom tap
+     action, so no other app can forge a "lock" broadcast.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -67,8 +67,10 @@
             </intent-filter>
         </activity>
 
-        <!-- Home-screen widget. Exported is mandatory for app widgets; the custom
-             WIDGET_TAP / REFRESH actions are guarded by a caller-UID check in code. -->
+        <!-- Home-screen widget. Exported is mandatory for app widgets. The custom
+             WIDGET_TAP action has no intent-filter (it is only ever delivered as an
+             explicit, immutable PendingIntent) and carries a per-install secret
+             token that is verified in code, so other apps cannot forge a tap. -->
         <receiver
             android:name=".LockWidgetProvider"
             android:exported="true"
@@ -80,8 +82,6 @@
                 <action android:name="android.appwidget.action.APPWIDGET_DISABLED" />
                 <action android:name="android.appwidget.action.APPWIDGET_OPTIONS_CHANGED" />
                 <action android:name="android.appwidget.action.APPWIDGET_RESTORED" />
-                <action android:name="com.solerunner26.lockscreenwidget.action.WIDGET_TAP" />
-                <action android:name="com.solerunner26.lockscreenwidget.action.REFRESH" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -100,8 +100,15 @@
             android:exported="true"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <!-- REQUIRED: Settings ("Device admin apps" list) and the system
+                 activation dialog (ACTION_ADD_DEVICE_ADMIN) only accept receivers
+                 that resolve for DEVICE_ADMIN_ENABLED. Without this filter the app
+                 is silently missing from the list and "Activate" does nothing. -->
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
             <meta-data
-                android:name="android.app.admin.device_admin"
+                android:name="android.app.device_admin"
                 android:resource="@xml/device_admin_policies" />
         </receiver>
 
