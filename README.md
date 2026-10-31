@@ -63,7 +63,12 @@ After locking, your normal unlock works as usual (fingerprint/face/PIN on Pixel)
 - **No accessibility service** — the app has no way to read the screen, OTPs or
   notifications. There is no `AccessibilityService` anywhere in the codebase.
 - **No internet permission** — no network stack is even imported; the app cannot
-  exfiltrate anything. Verified by `tools/validate_project.py`.
+  exfiltrate anything. Android enforces this in the kernel: a process without
+  the INTERNET permission cannot even open a network socket, so even code an
+  attacker managed to run inside the app could not send data out. The manifest
+  also strips network permissions with `tools:node="remove"` so no library can
+  add them later. Verified by `tools/validate_project.py`, and CI checks the
+  built APK.
 - **Only permission requested: `VIBRATE`** (install-time, no prompt) — used solely
   for the lock-confirmation buzz.
 - **Device admin: force-lock only** — the entire policy is one line in

@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
 
@@ -23,8 +24,7 @@ import android.widget.RemoteViews
  * Battery: this receiver runs only when the system delivers a widget event or the
  * user taps the widget (updatePeriodMillis = 0 in lock_widget_info.xml). It never
  * runs periodically, holds no wake lock and starts no service. The only delayed work
- * is the one-shot "disarm" redraw below, which lives inside the tap broadcast
- * itself (goAsync, < 1 s) and needs no alarm.
+ * is the one-shot "disarm" redraw below: a main-thread post (< 1 s), no alarm.
  */
 class LockWidgetProvider : AppWidgetProvider() {
 
@@ -57,7 +57,7 @@ class LockWidgetProvider : AppWidgetProvider() {
 
     private fun handleTap(context: Context) {
         val prefs = Prefs.get(context)
-        val now = System.currentTimeMillis()
+        val now = SystemClock.elapsedRealtime() // monotonic: immune to clock changes
         val shouldLock = if (prefs.gestureMode == Prefs.MODE_SINGLE_TAP) {
             true
         } else {
@@ -72,15 +72,17 @@ class LockWidgetProvider : AppWidgetProvider() {
             prefs.lastTapAt = now
             // Show the "armed — tap again" state, then clear it again once the
             // double-tap window has passed so the zone goes back to invisible.
+            //
+            // Deliberately NOT goAsync: the system delivers broadcasts to this receiver
+            // one at a time, so holding this one open would queue the second tap until
+            // the window had already closed and a double tap could never complete.
+            // Best-effort: if the process dies first, the next render clears it anyway.
             updateAll(context)
-            val pending = goAsync()
-            Handler(Looper.getMainLooper()).postDelayed({
-                try {
-                    updateAll(context)
-                } finally {
-                    pending.finish()
-                }
-            }, prefs.tapWindowMs + DISARM_SLACK_MS)
+            val app = context.applicationContext
+            Handler(Looper.getMainLooper()).postDelayed(
+                { updateAll(app) },
+                prefs.tapWindowMs + DISARM_SLACK_MS
+            )
         }
     }
 
@@ -93,7 +95,7 @@ class LockWidgetProvider : AppWidgetProvider() {
         const val ACTION_WIDGET_TAP = "com.solerunner26.lockscreenwidget.action.WIDGET_TAP"
         private const val EXTRA_TOKEN = "token"
 
-        private const val REQUEST_TAP = 1001
+        private const val REQUEST_TAP = 1003 // new code: old PendingIntents lacked the foreground flag
         private const val REQUEST_SETUP = 1002
         private const val DISARM_SLACK_MS = 60L
         private val ARMED_TINT = 0xFF6D4AC8.toInt() // violet flash for the "tap again" state
@@ -122,7 +124,7 @@ class LockWidgetProvider : AppWidgetProvider() {
                 if (adminActive) tapPendingIntent(context) else setupPendingIntent(context)
             )
 
-            val now = System.currentTimeMillis()
+            val now = SystemClock.elapsedRealtime()
             val armed = adminActive && prefs.gestureMode == Prefs.MODE_DOUBLE_TAP &&
                 TapGestureLogic.isDoubleTap(prefs.lastTapAt, now, prefs.tapWindowMs)
 
@@ -168,6 +170,9 @@ class LockWidgetProvider : AppWidgetProvider() {
             val intent = Intent(context, LockWidgetProvider::class.java)
                 .setAction(ACTION_WIDGET_TAP)
                 .putExtra(EXTRA_TOKEN, Prefs.get(context).tapToken)
+                // Foreground broadcast queue: taps arrive promptly instead of waiting
+                // behind background broadcasts, which keeps double-tap timing reliable.
+                .addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
             // Explicit component + FLAG_IMMUTABLE: only this receiver can receive it and
             // nobody can mutate it. The secret token in onReceive is the second layer.
             return PendingIntent.getBroadcast(

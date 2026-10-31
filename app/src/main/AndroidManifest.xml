@@ -15,11 +15,26 @@
    * The widget receiver verifies a per-install secret token on its custom tap
      action, so no other app can forge a "lock" broadcast.
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Normal permission, granted at install time, never prompts the user.
          Used only for a short vibration when the screen locks. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- NO NETWORK, EVER. Android only lets an app open sockets if it holds the
+         network permission (enforced by the kernel, not just the framework), so
+         without it nothing in this process can reach the internet — even code an
+         attacker somehow got to run inside the app. tools:node="remove" strips
+         these from the final APK even if a future library dependency tries to add
+         them through manifest merging; CI also inspects the built APK. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" tools:node="remove" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" tools:node="remove" />
 
     <application
         android:name=".QuickLockApp"

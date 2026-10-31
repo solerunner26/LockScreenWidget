@@ -110,6 +110,18 @@ admin activation: turn it OFF, install + activate, then turn it back ON. (Docume
 
 ## 6. Current state & open issues
 
+**RESOLVED (v2.0.1, verified on the API 37 emulator): double tap on the widget never locked.**
+Root cause: the v2.0.0 "disarm" redraw held the first tap's broadcast open with `goAsync()` for
+`tapWindow + 60 ms`. A manifest receiver gets its broadcasts one at a time, so the second tap was queued
+until the window had already closed and always counted as a new first tap (single-tap mode was fine).
+Fix: plain main-thread `postDelayed` redraw (no `goAsync`), tap timestamps on `SystemClock.elapsedRealtime()`,
+tap PendingIntent uses `FLAG_RECEIVER_FOREGROUND` (new request code 1003). The validator now rejects `goAsync(`
+in the provider. Emulator: one tap and two slow taps do not lock; 5/5 double taps lock.
+
+Also in v2.0.1: the manifest strips INTERNET / network-state / Wi-Fi / Bluetooth-connect / nearby-Wi-Fi
+permissions with `tools:node="remove"`, so no library can merge them in later (enforced by the validator;
+CI already rejects any built APK requesting them).
+
 **RESOLVED (v2.0.0, verified on an Android 17 / API 37 emulator): app missing from "Device admin apps".**
 Root cause: the manifest meta-data key was `android.app.admin.device_admin`; the platform key is
 `android.app.device_admin` (`DeviceAdminReceiver.DEVICE_ADMIN_META_DATA`). Settings logged
@@ -120,8 +132,8 @@ wrong one, and require the intent-filter. Verified on the emulator: app listed �
 ("Lock the screen" only) → activated → `lockNow()` turned the screen off.
 
 Other v2.0.0 fixes:
-- Widget "armed" flash never cleared (no redraw after the double-tap window) → one-shot redraw via
-  `goAsync()` + `Handler.postDelayed(tapWindow + 60 ms)` inside the tap broadcast (no alarm, no service).
+- Widget "armed" flash never cleared → one-shot `Handler.postDelayed(tapWindow + 60 ms)` redraw
+  (v2.0.0 wrapped this in `goAsync()`, which broke double tap — see v2.0.1 above).
 - Widget/tile taps without admin now open setup through activity PendingIntents
   (`startActivityAndCollapse(PendingIntent)` on API 34+); background activity starts were blocked.
 - Caller-UID guard replaced with a secret token (see constraint 6). Custom actions no longer have

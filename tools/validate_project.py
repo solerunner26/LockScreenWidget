@@ -217,11 +217,20 @@ section("5. Security & privacy policy assertions")
 # Scan the *effective* manifest: strip XML comments first so documentation notes
 # (which intentionally name the permissions we do NOT use) don't false-positive.
 manifest_text = re.sub(r"<!--.*?-->", "", open(MANIFEST, encoding="utf-8").read(), flags=re.S)
+TOOLS_NS = "{http://schemas.android.com/tools}"
 
-# 5a. permissions: exactly VIBRATE
-perms = [p.get(ANDROID_NS + "name") for p in manifest.findall("uses-permission")]
+# 5a. permissions: exactly VIBRATE (entries marked tools:node="remove" are strip
+# directives for manifest merging, not requests)
+all_perm_els = manifest.findall("uses-permission")
+removed = {p.get(ANDROID_NS + "name") for p in all_perm_els if p.get(TOOLS_NS + "node") == "remove"}
+perms = [p.get(ANDROID_NS + "name") for p in all_perm_els if p.get(TOOLS_NS + "node") != "remove"]
 check(perms == ["android.permission.VIBRATE"],
       f"permission list must be exactly [VIBRATE], got {perms}")
+for net in ("INTERNET", "ACCESS_NETWORK_STATE", "ACCESS_WIFI_STATE", "CHANGE_NETWORK_STATE"):
+    check("android.permission." + net in removed,
+          f"manifest must strip {net} with tools:node=\"remove\" so no library can merge it in")
+# The banned-word scan below must not trip over those strip directives.
+manifest_text = re.sub(r"<uses-permission[^>]*tools:node=\"remove\"[^>]*/>", "", manifest_text)
 for banned in ("INTERNET", "ACCESS_NETWORK_STATE", "SYSTEM_ALERT_WINDOW", "WAKE_LOCK",
                "FOREGROUND_SERVICE", "RECEIVE_BOOT_COMPLETED", "READ_SMS", "READ_CONTACTS",
                "CAMERA", "RECORD_AUDIO", "READ_EXTERNAL_STORAGE", "QUERY_ALL_PACKAGES",
@@ -309,6 +318,9 @@ check("FLAG_IMMUTABLE" in prov, "widget PendingIntent must be FLAG_IMMUTABLE")
 check("isTokenValid(" in prov and "tapToken" in prov,
       "widget provider must verify the per-install secret token on custom tap actions")
 check("PendingIntent.getBroadcast" in prov, "widget tap must use an explicit PendingIntent broadcast")
+# Regression guard: goAsync() in the tap path serialises the receiver and makes the
+# second tap of a double tap arrive after the window -> double tap never locks.
+check("goAsync(" not in prov, "widget provider must not hold taps with goAsync() (breaks double tap)")
 
 all_main_src = ""
 for dirpath, _, files in os.walk(KOTLIN_DIR):

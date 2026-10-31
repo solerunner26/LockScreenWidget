@@ -15,8 +15,8 @@ android {
         applicationId = "com.solerunner26.lockscreenwidget"
         minSdk = 26          // Android 8.0 — covers every modern Pixel
         targetSdk = 36
-        versionCode = 2
-        versionName = "2.0.0"
+        versionCode = 3
+        versionName = "2.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

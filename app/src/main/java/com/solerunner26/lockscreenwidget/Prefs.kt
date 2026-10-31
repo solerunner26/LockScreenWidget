@@ -78,7 +78,7 @@ class Prefs private constructor(private val sp: SharedPreferences) {
         get() = sp.getBoolean("haptics", true)
         set(value) = sp.edit().putBoolean("haptics", value).apply()
 
-    /** Wall-clock timestamp of the last widget tap, or [TapGestureLogic.NO_TAP]. */
+    /** Monotonic (elapsedRealtime) time of the last widget tap, or [TapGestureLogic.NO_TAP]. */
     var lastTapAt: Long
         get() = sp.getLong("last_tap_at", TapGestureLogic.NO_TAP)
         set(value) = sp.edit().putLong("last_tap_at", value).apply()
